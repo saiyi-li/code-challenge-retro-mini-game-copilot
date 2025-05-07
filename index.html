@@ -9,21 +9,37 @@
   <body>
     <div class="game-container">
       <div id="start-screen" class="screen">
-        <h1>RETRO RUNNER</h1>
+        <h1 class="flicker">RETRO RUNNER</h1>
         <p>Jump over obstacles and collect coins!</p>
+
+        <div class="instructions">
+          <h2>HOW TO PLAY</h2>
+          <p>SPACE / UP ARROW / TAP = JUMP</p>
+          <p>Collect power-ups for special abilities:</p>
+          <p>🔵 SPEED - Move faster</p>
+          <p>🟡 SHIELD - Temporary invincibility</p>
+          <p>🟣 2X PTS - Double your coins!</p>
+        </div>
+
         <button id="start-button">START GAME</button>
+
+        <div class="high-score">TOP SCORE: <span id="high-score">0</span></div>
       </div>
 
       <canvas id="game-canvas"></canvas>
 
       <div id="game-over-screen" class="screen hidden">
         <h1>GAME OVER</h1>
-        <p>Your score: <span id="final-score">0</span></p>
+        <p>YOUR SCORE: <span id="final-score">0</span></p>
+        <p class="high-score">
+          HIGH SCORE: <span id="game-over-high-score">0</span>
+        </p>
         <button id="restart-button">PLAY AGAIN</button>
       </div>
 
       <div id="game-ui">
         <div id="score-display">SCORE: <span id="score">0</span></div>
+        <div class="controls-info">SPACE / UP = JUMP</div>
       </div>
     </div>
 

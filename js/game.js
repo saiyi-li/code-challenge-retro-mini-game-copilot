@@ -14,6 +14,10 @@ const startScreen = document.getElementById("start-screen");
 const gameOverScreen = document.getElementById("game-over-screen");
 const scoreElement = document.getElementById("score");
 const finalScoreElement = document.getElementById("final-score");
+const highScoreElement = document.getElementById("high-score");
+const gameOverHighScoreElement = document.getElementById(
+  "game-over-high-score"
+);
 
 // Buttons
 const startButton = document.getElementById("start-button");
@@ -22,6 +26,7 @@ const restartButton = document.getElementById("restart-button");
 // Game variables
 let gameActive = false;
 let score = 0;
+let highScore = 0;
 let animationId;
 let speed = 5;
 let lastTime = 0;
@@ -69,6 +74,7 @@ const POWER_UP_SPAWN_RATE = 0.2; // % chance per second (rarer than coins)
 const POWER_UP_DURATION = 10; // Power-up duration in seconds
 const SPEED_BOOST_MULTIPLIER = 1.5; // How much faster with speed boost
 const DOUBLE_POINTS_MULTIPLIER = 2; // How many extra points for double points
+const LOCAL_STORAGE_HIGH_SCORE_KEY = "retroRunnerHighScore";
 
 // Responsive canvas sizing
 function resizeCanvas() {
@@ -79,6 +85,46 @@ function resizeCanvas() {
   if (player) {
     player.y = canvas.height - GROUND_HEIGHT - player.height;
   }
+}
+
+// Load high score from local storage
+function loadHighScore() {
+  try {
+    const savedHighScore = localStorage.getItem(LOCAL_STORAGE_HIGH_SCORE_KEY);
+    if (savedHighScore) {
+      highScore = parseInt(savedHighScore);
+      updateHighScoreDisplay();
+    }
+  } catch (error) {
+    console.error("Error loading high score from local storage:", error);
+  }
+}
+
+// Save high score to local storage
+function saveHighScore() {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_HIGH_SCORE_KEY, highScore.toString());
+  } catch (error) {
+    console.error("Error saving high score to local storage:", error);
+  }
+}
+
+// Update high score display
+function updateHighScoreDisplay() {
+  if (highScoreElement) highScoreElement.textContent = highScore;
+  if (gameOverHighScoreElement)
+    gameOverHighScoreElement.textContent = highScore;
+}
+
+// Check and update high score
+function checkHighScore() {
+  if (score > highScore) {
+    highScore = score;
+    saveHighScore();
+    updateHighScoreDisplay();
+    return true;
+  }
+  return false;
 }
 
 // Generate or load game assets
@@ -473,6 +519,14 @@ function playerJump() {
   if (!player.isJumping) {
     player.isJumping = true;
     player.velocityY = JUMP_FORCE;
+
+    // Add jump sound effect if available
+    if (gameAssets && gameAssets.sounds && gameAssets.sounds.jump) {
+      gameAssets.sounds.jump.currentTime = 0;
+      gameAssets.sounds.jump
+        .play()
+        .catch((error) => console.warn("Audio play error:", error));
+    }
   }
 }
 
@@ -667,7 +721,7 @@ function render() {
   if (player.hasPowerUp) {
     const powerUpLabels = ["SPEED", "SHIELD", "2X PTS"];
     ctx.fillStyle = "#fff";
-    ctx.font = "bold 14px Arial";
+    ctx.font = "bold 14px 'Press Start 2P', monospace";
     ctx.fillText(
       `${powerUpLabels[player.powerUpType]}: ${Math.ceil(
         player.powerUpTimeLeft
@@ -676,6 +730,27 @@ function render() {
       30
     );
   }
+
+  // Draw score in retro pixel style
+  ctx.font = "16px 'Press Start 2P', monospace";
+  ctx.fillStyle = "#fff";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+
+  // Add retro pixel effect around score display
+  const scoreBoxX = 20;
+  const scoreBoxY = 20;
+  const scoreText = `SCORE: ${score}`;
+  const scoreWidth = ctx.measureText(scoreText).width;
+
+  // Draw score with pixel shadow effect
+  ctx.shadowColor = "#000";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 2;
+  ctx.shadowOffsetY = 2;
+  ctx.fillText(scoreText, scoreBoxX, scoreBoxY);
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
 }
 
 // Render a background layer with tiling if needed
@@ -690,8 +765,34 @@ function renderBackgroundLayer(layerCanvas, x, y) {
 function gameOver() {
   gameActive = false;
   cancelAnimationFrame(animationId);
+
+  // Check if this is a new high score
+  const isNewHighScore = checkHighScore();
+
+  // Update UI
   finalScoreElement.textContent = score;
+  gameOverHighScoreElement.textContent = highScore;
+
+  // Add visual indication if it's a new high score
+  const highScoreMessage = document.querySelector(".high-score");
+  if (highScoreMessage && isNewHighScore) {
+    highScoreMessage.innerHTML = `NEW HIGH SCORE! <span id="game-over-high-score">${highScore}</span>`;
+    highScoreMessage.style.color = "#ffff00";
+    highScoreMessage.style.animation = "pulse 1s infinite alternate";
+  } else if (highScoreMessage) {
+    highScoreMessage.style.color = "#ffcc00";
+    highScoreMessage.style.animation = "none";
+  }
+
   gameOverScreen.classList.remove("hidden");
+
+  // Play game over sound if available
+  if (gameAssets && gameAssets.sounds && gameAssets.sounds.gameOver) {
+    gameAssets.sounds.gameOver.currentTime = 0;
+    gameAssets.sounds.gameOver
+      .play()
+      .catch((error) => console.warn("Audio play error:", error));
+  }
 }
 
 // Setup all event listeners
@@ -768,6 +869,7 @@ function setupEventListeners() {
 window.addEventListener("load", function () {
   console.log("Window loaded");
   resizeCanvas();
+  loadHighScore();
   setupEventListeners();
 
   // Display start screen initially

@@ -8,7 +8,7 @@
 | Assets            | Completed   | May 7, 2025          |
 | Core Mechanics    | In Progress | -                    |
 | Optional Features | Completed   | May 7, 2025          |
-| UI                | In Progress | -                    |
+| UI                | Completed   | May 7, 2025          |
 | Testing           | Not Started | -                    |
 | Polishing         | Not Started | -                    |
 
@@ -49,11 +49,11 @@
 
 ### 6. UI Development
 
-- [] Create score display in retro pixel style
-- [] Design and implement start screen
-- [] Create Game Over screen with final score
-- [] Add restart button functionality
-- [ ] Implement basic instructions or tutorial element
+- [x] Create score display in retro pixel style
+- [x] Design and implement start screen
+- [x] Create Game Over screen with final score
+- [x] Add restart button functionality
+- [x] Implement basic instructions or tutorial element
 
 ### 7. Testing and Optimization
 
@@ -80,6 +80,8 @@
 - Basic project structure set up
 - Implemented asset generation for all game graphics
 - Added core game mechanics including player jumping, obstacles, coins, and collision
+- Implemented power-ups system (speed boost, invincibility, double points)
+- Enhanced UI with retro-style elements, instructions, and high score tracking
 
 ## Notes and Ideas
 

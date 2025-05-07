@@ -1,6 +1,14 @@
 /* Retro Mini Game Styles */
 @import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
+/* Pixel-art rendering */
+canvas,
+img {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -24,6 +32,8 @@ body {
   max-width: 800px;
   height: 600px;
   margin: 0 auto;
+  border: 4px solid #ff7700;
+  box-shadow: 0 0 15px rgba(255, 119, 0, 0.5);
 }
 
 #game-canvas {
@@ -43,9 +53,10 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.85);
   text-align: center;
   padding: 20px;
+  z-index: 100;
 }
 
 .hidden {
@@ -57,11 +68,24 @@ h1 {
   margin-bottom: 20px;
   color: #ff7700;
   text-shadow: 3px 3px 0 #000;
+  letter-spacing: 2px;
+  animation: pulse 1.5s infinite alternate;
 }
 
-p {
+@keyframes pulse {
+  from {
+    text-shadow: 3px 3px 0 #000;
+  }
+  to {
+    text-shadow: 3px 3px 0 #000, 0 0 10px #ff7700;
+  }
+}
+
+.screen p {
   margin-bottom: 30px;
   line-height: 1.5;
+  color: #ddd;
+  text-shadow: 2px 2px 0 #000;
 }
 
 button {
@@ -78,6 +102,7 @@ button {
   font-family: "Press Start 2P", cursive;
   border: 3px solid #fff;
   box-shadow: 5px 5px 0 #000;
+  transition: all 0.1s ease;
 }
 
 button:hover {
@@ -95,12 +120,84 @@ button:active {
   top: 20px;
   left: 20px;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 #score-display {
-  font-size: 1rem;
+  font-size: 1.2rem;
   color: #fff;
   text-shadow: 2px 2px 0 #000;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  border: 2px solid #ff7700;
+}
+
+.controls-info {
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  border: 2px solid #ff7700;
+  margin-top: 10px;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.game-logo {
+  max-width: 80%;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 10px rgba(255, 119, 0, 0.7));
+}
+
+.high-score {
+  color: #ffcc00;
+  margin-top: 10px;
+}
+
+.instructions {
+  border: 2px dashed #ff7700;
+  padding: 15px;
+  margin-top: 15px;
+  max-width: 80%;
+  font-size: 0.8rem;
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.instructions h2 {
+  color: #ff9900;
+  margin-bottom: 10px;
+  font-size: 1rem;
+}
+
+.instructions p {
+  margin-bottom: 10px;
+  font-size: 0.7rem;
+}
+
+.flicker {
+  animation: flicker 2s linear infinite;
+}
+
+@keyframes flicker {
+  0%,
+  19.999%,
+  22%,
+  62.999%,
+  64%,
+  64.999%,
+  70%,
+  100% {
+    opacity: 1;
+  }
+  20%,
+  21.999%,
+  63%,
+  63.999%,
+  65%,
+  69.999% {
+    opacity: 0.5;
+  }
 }
 
 /* Media queries for responsiveness */
@@ -117,6 +214,11 @@ button:active {
   button {
     padding: 10px 25px;
   }
+
+  .instructions {
+    font-size: 0.7rem;
+    padding: 10px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -129,6 +231,15 @@ button:active {
   }
 
   #score-display {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .instructions {
+    font-size: 0.6rem;
+    padding: 8px;
+  }
+
+  .game-logo {
+    max-width: 90%;
   }
 }

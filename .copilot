@@ -29,7 +29,7 @@ clean_code:
   description: Guidelines for writing clean, maintainable, and human-readable code.
   rules:
     - name: Constants Over Magic Numbers
-      description: 
+      description:
         - Replace hard-coded values with named constants
         - Use descriptive constant names that explain the value's purpose
         - Keep constants at the top of the file or in a dedicated constants file
@@ -75,6 +75,7 @@ clean_code:
         - Refactor continuously
         - Fix technical debt early
         - Leave code cleaner than you found it
+        - After each task section, ask me to open the index.html file in browser for testing.
 
     - name: Testing
       description:

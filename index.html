@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Retro Runner</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="game-container">
+      <div id="start-screen" class="screen">
+        <h1>RETRO RUNNER</h1>
+        <p>Jump over obstacles and collect coins!</p>
+        <button id="start-button">START GAME</button>
+      </div>
+
+      <canvas id="game-canvas"></canvas>
+
+      <div id="game-over-screen" class="screen hidden">
+        <h1>GAME OVER</h1>
+        <p>Your score: <span id="final-score">0</span></p>
+        <button id="restart-button">PLAY AGAIN</button>
+      </div>
+
+      <div id="game-ui">
+        <div id="score-display">SCORE: <span id="score">0</span></div>
+      </div>
+    </div>
+
+    <!-- Asset Generator -->
+    <script src="js/asset-generator.js"></script>
+
+    <!-- Main Game Script -->
+    <script src="js/game.js"></script>
+  </body>
+</html>

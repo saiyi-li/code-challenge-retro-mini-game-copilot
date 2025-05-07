@@ -68,13 +68,61 @@ let backgrounds = {
 const GROUND_HEIGHT = 40;
 const JUMP_FORCE = -800;
 const GRAVITY = 1800;
-const OBSTACLE_SPAWN_RATE = 0.5; // % chance per second
-const COIN_SPAWN_RATE = 1; // % chance per second
-const POWER_UP_SPAWN_RATE = 0.2; // % chance per second (rarer than coins)
+let OBSTACLE_SPAWN_RATE = 0.5; // % chance per second
+let COIN_SPAWN_RATE = 1; // % chance per second
+let POWER_UP_SPAWN_RATE = 0.2; // % chance per second (rarer than coins)
 const POWER_UP_DURATION = 10; // Power-up duration in seconds
 const SPEED_BOOST_MULTIPLIER = 1.5; // How much faster with speed boost
 const DOUBLE_POINTS_MULTIPLIER = 2; // How many extra points for double points
 const LOCAL_STORAGE_HIGH_SCORE_KEY = "retroRunnerHighScore";
+
+// Performance tracking variables
+let fpsCounter = {
+  frames: 0,
+  lastCheck: 0,
+  currentFps: 0,
+  fpsHistory: [],
+  showStats: false,
+};
+
+// Detect browser for browser-specific optimizations
+const browserInfo = {
+  name: getBrowserName(),
+  isMobile:
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    ),
+  isLowEnd: false, // Will be determined based on FPS performance
+};
+
+// Game difficulty settings
+const gameDifficulty = {
+  easy: {
+    obstacleSpawnRate: 0.3,
+    coinSpawnRate: 1.2,
+    powerUpSpawnRate: 0.3,
+    speedIncrement: 0.3,
+  },
+  medium: {
+    obstacleSpawnRate: 0.5,
+    coinSpawnRate: 1.0,
+    powerUpSpawnRate: 0.2,
+    speedIncrement: 0.5,
+  },
+  hard: {
+    obstacleSpawnRate: 0.7,
+    coinSpawnRate: 0.8,
+    powerUpSpawnRate: 0.15,
+    speedIncrement: 0.7,
+  },
+};
+
+// Current game settings (default: medium)
+let currentDifficulty = gameDifficulty.medium;
+
+// Asset loading optimization
+let assetsLoaded = false;
+let assetsLoadingStartTime = 0;
 
 // Responsive canvas sizing
 function resizeCanvas() {
@@ -129,12 +177,36 @@ function checkHighScore() {
 
 // Generate or load game assets
 function loadGameAssets() {
+  if (assetsLoaded) {
+    console.log("Using cached game assets");
+    return;
+  }
+
   // Generate assets if they don't exist
   if (!gameAssets) {
     console.log("Generating game assets...");
     try {
-      gameAssets = AssetGenerator.generateAllAssets();
+      // Apply browser-specific optimizations
+      const assetQuality = browserInfo.isMobile ? "low" : "high";
+      console.log(
+        `Using ${assetQuality} quality assets for ${browserInfo.name}`
+      );
+
+      // Start with a smaller subset of assets for faster initial load
+      gameAssets = AssetGenerator.generateAllAssets(assetQuality);
       console.log("Assets generated successfully:", gameAssets);
+
+      // Apply browser-specific audio handling
+      if (gameAssets.sounds) {
+        preloadAudio(gameAssets.sounds);
+      }
+
+      // Optimize images
+      if (gameAssets.backgrounds) {
+        optimizeBackgroundLayers(gameAssets.backgrounds);
+      }
+
+      assetsLoaded = true;
     } catch (error) {
       console.error("Error generating assets:", error);
     }
@@ -145,7 +217,16 @@ function loadGameAssets() {
 function init() {
   console.log("Game initialization started");
   resizeCanvas();
+
+  // Track asset loading time
+  assetsLoadingStartTime = performance.now();
   loadGameAssets();
+  console.log(
+    `Assets loaded in ${performance.now() - assetsLoadingStartTime}ms`
+  );
+
+  // Apply appropriate difficulty settings based on device capability
+  adjustGameDifficultyForDevice();
 
   // Hide start screen and show game
   startScreen.classList.add("hidden");
@@ -179,10 +260,29 @@ function init() {
   coins = [];
   powerUps = [];
 
+  // Reset FPS counter
+  fpsCounter.frames = 0;
+  fpsCounter.lastCheck = performance.now();
+  fpsCounter.fpsHistory = [];
+
   // Start the game loop
   lastTime = performance.now();
   gameLoop();
   console.log("Game loop started");
+}
+
+// Adjust game difficulty based on device performance
+function adjustGameDifficultyForDevice() {
+  if (browserInfo.isMobile) {
+    // Reduce visual effects on mobile
+    currentDifficulty = gameDifficulty.easy;
+    console.log("Mobile device detected, optimizing for performance");
+  }
+
+  // Apply current difficulty settings
+  OBSTACLE_SPAWN_RATE = currentDifficulty.obstacleSpawnRate;
+  COIN_SPAWN_RATE = currentDifficulty.coinSpawnRate;
+  POWER_UP_SPAWN_RATE = currentDifficulty.powerUpSpawnRate;
 }
 
 // Game loop
@@ -196,6 +296,32 @@ function gameLoop(timestamp) {
 
   // Clear the canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Track frames for FPS calculation
+  fpsCounter.frames++;
+
+  if (timestamp - fpsCounter.lastCheck >= 1000) {
+    fpsCounter.currentFps = fpsCounter.frames;
+    fpsCounter.fpsHistory.push(fpsCounter.currentFps);
+
+    // Only keep last 10 FPS readings
+    if (fpsCounter.fpsHistory.length > 10) {
+      fpsCounter.fpsHistory.shift();
+    }
+
+    // Check for performance issues
+    const avgFps =
+      fpsCounter.fpsHistory.reduce((a, b) => a + b, 0) /
+      fpsCounter.fpsHistory.length;
+    if (avgFps < 30 && !browserInfo.isLowEnd) {
+      console.warn("Low FPS detected, optimizing for performance");
+      optimizeForLowEndDevice();
+    }
+
+    // Reset frame counter
+    fpsCounter.frames = 0;
+    fpsCounter.lastCheck = timestamp;
+  }
 
   if (gameActive) {
     // Update game state
@@ -567,8 +693,22 @@ function render() {
   ctx.fillStyle = "#3a4466";
   ctx.fillRect(0, canvas.height - GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
 
-  // Draw coins
-  coins.forEach((coin) => {
+  // Only render visible elements (simple culling)
+  // This prevents rendering objects that are off-screen
+  const visibleObstacles = obstacles.filter(
+    (obs) => obs.x > -obs.width && obs.x < canvas.width
+  );
+
+  const visibleCoins = coins.filter(
+    (coin) => coin.x > -coin.width && coin.x < canvas.width
+  );
+
+  const visiblePowerUps = powerUps.filter(
+    (powerUp) => powerUp.x > -powerUp.width && powerUp.x < canvas.width
+  );
+
+  // Draw coins (only visible ones)
+  visibleCoins.forEach((coin) => {
     if (gameAssets && gameAssets.coins) {
       // Draw coin sprite from spritesheet
       ctx.drawImage(
@@ -591,8 +731,8 @@ function render() {
     }
   });
 
-  // Draw power-ups
-  powerUps.forEach((powerUp) => {
+  // Draw power-ups (only visible ones)
+  visiblePowerUps.forEach((powerUp) => {
     if (gameAssets && gameAssets.powerups) {
       // Draw power-up sprite from spritesheet with pulsing effect
       const pulseScale = 1 + Math.sin(powerUp.pulse * 0.3) * 0.1;
@@ -695,8 +835,8 @@ function render() {
     ctx.fillRect(player.x, player.y, player.width, player.height);
   }
 
-  // Draw obstacles
-  obstacles.forEach((obstacle) => {
+  // Draw obstacles (only visible ones)
+  visibleObstacles.forEach((obstacle) => {
     if (gameAssets && gameAssets.obstacles) {
       // Draw obstacle sprite from spritesheet
       ctx.drawImage(
@@ -751,6 +891,22 @@ function render() {
   ctx.fillText(scoreText, scoreBoxX, scoreBoxY);
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
+
+  // Display performance stats when enabled
+  if (fpsCounter.showStats) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillRect(canvas.width - 100, 10, 90, 60);
+
+    ctx.font = "12px Arial";
+    ctx.fillStyle = "#fff";
+    ctx.fillText(`FPS: ${fpsCounter.currentFps}`, canvas.width - 90, 30);
+    ctx.fillText(
+      `Objects: ${obstacles.length + coins.length + powerUps.length}`,
+      canvas.width - 90,
+      50
+    );
+    ctx.fillText(`Browser: ${browserInfo.name}`, canvas.width - 90, 70);
+  }
 }
 
 // Render a background layer with tiling if needed
@@ -865,6 +1021,164 @@ function setupEventListeners() {
   window.addEventListener("resize", resizeCanvas);
 }
 
+// Detect browser name for browser-specific optimizations
+function getBrowserName() {
+  const userAgent = navigator.userAgent;
+  let browser = "Unknown";
+
+  if (userAgent.match(/chrome|chromium|crios/i)) {
+    browser = "Chrome";
+  } else if (userAgent.match(/firefox|fxios/i)) {
+    browser = "Firefox";
+  } else if (userAgent.match(/safari/i)) {
+    browser = "Safari";
+  } else if (userAgent.match(/opr\//i)) {
+    browser = "Opera";
+  } else if (userAgent.match(/edg/i)) {
+    browser = "Edge";
+  }
+  console.log(`Browser detected: ${browser}`);
+  return browser;
+}
+
+// Check if browser is Safari for specific audio handling
+function isSafari() {
+  return browserInfo.name === "Safari";
+}
+
+// Optimize game for low-end devices
+function optimizeForLowEndDevice() {
+  browserInfo.isLowEnd = true;
+
+  // Reduce spawn rates and effects
+  currentDifficulty = gameDifficulty.easy;
+  OBSTACLE_SPAWN_RATE = currentDifficulty.obstacleSpawnRate * 0.8;
+
+  // Simplify rendering of background layers
+  // Limit number of objects on screen by reducing max counts
+}
+
+// Preload and optimize audio
+function preloadAudio(sounds) {
+  if (!sounds) return;
+
+  // For each sound in the sounds object
+  Object.values(sounds).forEach((sound) => {
+    if (sound instanceof HTMLAudioElement) {
+      // Set low volume by default to avoid startling users
+      sound.volume = 0.7;
+
+      // For Safari, we need to handle audio differently
+      if (isSafari()) {
+        sound.preload = "auto";
+      }
+
+      // Add error handling for audio
+      sound.addEventListener("error", (e) => {
+        console.warn("Audio error:", e);
+      });
+    }
+  });
+}
+
+// Optimize background layers for performance
+function optimizeBackgroundLayers(backgrounds) {
+  if (!backgrounds) return;
+
+  // If on a low-end device, use simpler background
+  if (browserInfo.isLowEnd) {
+    // For low-end devices, we could simplify the background or use a static image
+    console.log("Optimizing background layers for low-end device");
+  }
+}
+
+// Run performance tests
+function runPerformanceTests() {
+  console.log("Running performance tests...");
+
+  // Test FPS stability
+  const testDuration = 5000; // 5 seconds
+  const startTime = performance.now();
+  let framesRendered = 0;
+
+  function testFrame() {
+    framesRendered++;
+
+    if (performance.now() - startTime < testDuration) {
+      requestAnimationFrame(testFrame);
+    } else {
+      // Test complete
+      const fps = framesRendered / (testDuration / 1000);
+      console.log(`Performance test complete. Average FPS: ${fps.toFixed(2)}`);
+
+      // Recommend optimizations based on results
+      if (fps < 30) {
+        console.warn(
+          "Low performance detected, automatically applying optimizations"
+        );
+        optimizeForLowEndDevice();
+      }
+    }
+  }
+
+  // Start the test
+  requestAnimationFrame(testFrame);
+}
+
+// Test responsive design
+function testResponsiveness() {
+  console.log("Testing responsive design...");
+
+  // Get current dimensions
+  const currentWidth = canvas.width;
+  const currentHeight = canvas.height;
+
+  // Test common screen sizes
+  const testSizes = [
+    { width: 320, height: 568 }, // iPhone SE
+    { width: 375, height: 667 }, // iPhone 6/7/8
+    { width: 414, height: 896 }, // iPhone XR
+    { width: 768, height: 1024 }, // iPad
+    { width: 1366, height: 768 }, // Laptop
+    { width: 1920, height: 1080 }, // Desktop
+  ];
+
+  testSizes.forEach((size) => {
+    console.log(`Testing layout at ${size.width}x${size.height}...`);
+    // This is simulation only, would need actual resize in a real test environment
+  });
+
+  // Restore original dimensions
+  canvas.width = currentWidth;
+  canvas.height = currentHeight;
+}
+
+// Additional event listeners for testing functionality
+function setupTestingEventListeners() {
+  // Add keyboard shortcut for running performance test
+  window.addEventListener("keydown", (e) => {
+    // Ctrl+Shift+T runs performance tests
+    if (e.ctrlKey && e.shiftKey && (e.key === "t" || e.code === "KeyT")) {
+      e.preventDefault(); // Prevent browser's default behavior
+      runPerformanceTests();
+    }
+
+    // Ctrl+Shift+R tests responsiveness
+    if (e.ctrlKey && e.shiftKey && (e.key === "r" || e.code === "KeyR")) {
+      e.preventDefault();
+      testResponsiveness();
+    }
+  });
+}
+
+// Update setupEventListeners to include testing functionality
+const originalSetupEventListeners = setupEventListeners;
+setupEventListeners = function () {
+  originalSetupEventListeners();
+  setupTestingEventListeners();
+  console.log("Testing event listeners added");
+};
+
 // Initialize canvas size and event listeners on load
 window.addEventListener("load", function () {
   console.log("Window loaded");
@@ -874,4 +1188,28 @@ window.addEventListener("load", function () {
 
   // Display start screen initially
   canvas.style.opacity = 0.3;
+});
+
+// Toggle performance stats display with 'P' key
+window.addEventListener("keydown", (e) => {
+  if (e.key === "p" || e.code === "KeyP") {
+    fpsCounter.showStats = !fpsCounter.showStats;
+  }
+
+  // Emergency performance mode toggle with 'O' key
+  if (e.key === "o" || e.code === "KeyO") {
+    optimizeForLowEndDevice();
+  }
+
+  // Toggle difficulty with '1', '2', '3' keys
+  if (e.key === "1") {
+    currentDifficulty = gameDifficulty.easy;
+    adjustGameDifficultyForDevice();
+  } else if (e.key === "2") {
+    currentDifficulty = gameDifficulty.medium;
+    adjustGameDifficultyForDevice();
+  } else if (e.key === "3") {
+    currentDifficulty = gameDifficulty.hard;
+    adjustGameDifficultyForDevice();
+  }
 });

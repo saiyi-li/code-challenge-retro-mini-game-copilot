@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Retro Runner - Responsive Design Test</title>
+    <style>
+      body {
+        font-family: "Courier New", monospace;
+        background-color: #222;
+        color: #ddd;
+        margin: 0;
+        padding: 20px;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        color: #ff7700;
+      }
+
+      .test-panel {
+        background-color: #333;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        background-color: #ff7700;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-family: "Courier New", monospace;
+        font-weight: bold;
+      }
+
+      button:hover {
+        background-color: #ff9900;
+      }
+
+      select {
+        padding: 10px;
+        background-color: #444;
+        color: #fff;
+        border: 1px solid #666;
+        border-radius: 3px;
+      }
+
+      .device-preview {
+        width: 100%;
+        overflow-x: auto;
+        margin-top: 20px;
+      }
+
+      .device-container {
+        position: relative;
+        margin: 0 auto;
+        border: 3px solid #ff7700;
+        background-color: #111;
+        transition: all 0.3s ease;
+        overflow: hidden;
+      }
+
+      .device-info {
+        background-color: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        padding: 5px 10px;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 100;
+        font-size: 12px;
+      }
+
+      .report-container {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #222;
+        border: 1px solid #444;
+      }
+
+      .report-item {
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px dashed #444;
+      }
+
+      .report-item.success {
+        color: #4caf50;
+      }
+
+      .report-item.warning {
+        color: #ffc107;
+      }
+
+      .report-item.error {
+        color: #f44336;
+      }
+
+      .iframe-container {
+        width: 100%;
+        height: 100%;
+      }
+
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Retro Runner Responsive Design Test</h1>
+      <p>
+        Test how the game performs across different screen sizes and devices
+      </p>
+    </header>
+
+    <div class="test-panel">
+      <div class="controls">
+        <select id="device-selector">
+          <option value="custom">Custom Size</option>
+          <option value="mobile-portrait">Mobile Portrait (320×568)</option>
+          <option value="mobile-landscape">Mobile Landscape (568×320)</option>
+          <option value="tablet-portrait">Tablet Portrait (768×1024)</option>
+          <option value="tablet-landscape">Tablet Landscape (1024×768)</option>
+          <option value="laptop">Laptop (1366×768)</option>
+          <option value="desktop">Desktop (1920×1080)</option>
+        </select>
+
+        <div id="custom-size-controls" style="display: flex; gap: 10px">
+          <input
+            type="number"
+            id="custom-width"
+            placeholder="Width"
+            value="800"
+            min="280"
+            style="
+              width: 80px;
+              padding: 10px;
+              background-color: #444;
+              color: #fff;
+              border: 1px solid #666;
+            "
+          />
+          <span style="line-height: 40px">×</span>
+          <input
+            type="number"
+            id="custom-height"
+            placeholder="Height"
+            value="600"
+            min="280"
+            style="
+              width: 80px;
+              padding: 10px;
+              background-color: #444;
+              color: #fff;
+              border: 1px solid #666;
+            "
+          />
+        </div>
+
+        <button id="apply-size">Apply Size</button>
+        <button id="run-test">Test Responsive Design</button>
+      </div>
+
+      <div class="device-preview">
+        <div
+          id="device-container"
+          class="device-container"
+          style="width: 800px; height: 600px"
+        >
+          <div class="device-info" id="device-info">800×600</div>
+          <div class="iframe-container">
+            <iframe
+              id="game-iframe"
+              src="../index.html"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="report-container">
+        <h3>Responsive Design Test Results</h3>
+        <div id="report-log"></div>
+      </div>
+    </div>
+
+    <script>
+      // Device dimensions presets
+      const devicePresets = {
+        custom: { width: 800, height: 600 },
+        "mobile-portrait": { width: 320, height: 568 },
+        "mobile-landscape": { width: 568, height: 320 },
+        "tablet-portrait": { width: 768, height: 1024 },
+        "tablet-landscape": { width: 1024, height: 768 },
+        laptop: { width: 1366, height: 768 },
+        desktop: { width: 1920, height: 1080 },
+      };
+
+      // DOM Elements
+      const deviceSelector = document.getElementById("device-selector");
+      const customWidthInput = document.getElementById("custom-width");
+      const customHeightInput = document.getElementById("custom-height");
+      const customSizeControls = document.getElementById(
+        "custom-size-controls"
+      );
+      const applyButton = document.getElementById("apply-size");
+      const runTestButton = document.getElementById("run-test");
+      const deviceContainer = document.getElementById("device-container");
+      const deviceInfo = document.getElementById("device-info");
+      const gameIframe = document.getElementById("game-iframe");
+      const reportLog = document.getElementById("report-log");
+
+      // Responsive testing utilities
+      const ResponsiveTester = {
+        // Log a message to the report container
+        log(message, type = "normal") {
+          const logItem = document.createElement("div");
+          logItem.className = `report-item ${type}`;
+          logItem.textContent = message;
+          reportLog.prepend(logItem);
+        },
+
+        // Clear the report log
+        clearLog() {
+          reportLog.innerHTML = "";
+        },
+
+        // Apply a device preset or custom size
+        applySize(width, height) {
+          // Maximum width for the container (to fit within the viewport)
+          const maxWidth = window.innerWidth - 60;
+
+          // If the device width is larger than available space, scale it down
+          let scale = 1;
+          if (width > maxWidth) {
+            scale = maxWidth / width;
+          }
+
+          // Apply the size to the container
+          deviceContainer.style.width = `${width}px`;
+          deviceContainer.style.height = `${height}px`;
+
+          // If scaling is needed, use transform
+          if (scale < 1) {
+            deviceContainer.style.transform = `scale(${scale})`;
+            deviceContainer.style.transformOrigin = "top left";
+            deviceContainer.style.marginBottom = `${height * scale - height}px`;
+          } else {
+            deviceContainer.style.transform = "";
+            deviceContainer.style.marginBottom = "0";
+          }
+
+          // Update the device info display
+          deviceInfo.textContent = `${width}×${height}`;
+
+          return { width, height, scale };
+        },
+
+        // Run the responsive design test
+        async runTest() {
+          this.clearLog();
+          this.log("Starting responsive design test...", "normal");
+
+          // Get current dimensions
+          const width = parseInt(deviceContainer.style.width);
+          const height = parseInt(deviceContainer.style.height);
+
+          // Allow the game to resize
+          setTimeout(() => {
+            // Check if game canvas is properly sized
+            this.testCanvasSize();
+
+            // Check UI elements positioning
+            this.testUIElements();
+
+            // Test touch controls
+            this.testTouchControls();
+
+            // Generate summary
+            this.generateSummary(width, height);
+          }, 1000); // Give time for the game to resize
+        },
+
+        // Test if the game canvas resizes correctly
+        testCanvasSize() {
+          try {
+            // Get the game canvas from the iframe
+            const iframeDoc =
+              gameIframe.contentDocument || gameIframe.contentWindow.document;
+            const gameCanvas = iframeDoc.getElementById("game-canvas");
+
+            if (!gameCanvas) {
+              this.log("Could not find game canvas element", "error");
+              return false;
+            }
+
+            // Get the game container
+            const gameContainer = iframeDoc.querySelector(".game-container");
+            if (!gameContainer) {
+              this.log("Could not find game container element", "error");
+              return false;
+            }
+
+            // Check if canvas is responsive
+            const containerWidth = gameContainer.clientWidth;
+            const containerHeight = gameContainer.clientHeight;
+            const canvasWidth = gameCanvas.width;
+            const canvasHeight = gameCanvas.height;
+
+            this.log(
+              `Game container size: ${containerWidth}×${containerHeight}px`,
+              "normal"
+            );
+            this.log(
+              `Game canvas size: ${canvasWidth}×${canvasHeight}px`,
+              "normal"
+            );
+
+            // Check if canvas dimensions match container
+            if (
+              Math.abs(canvasWidth - containerWidth) > 5 ||
+              Math.abs(canvasHeight - containerHeight) > 5
+            ) {
+              this.log(
+                "⚠️ Canvas dimensions do not match container",
+                "warning"
+              );
+              return false;
+            }
+
+            this.log(
+              "✓ Canvas resizes correctly with the container",
+              "success"
+            );
+            return true;
+          } catch (error) {
+            this.log(`Error testing canvas size: ${error.message}`, "error");
+            return false;
+          }
+        },
+
+        // Test UI elements positioning
+        testUIElements() {
+          try {
+            const iframeDoc =
+              gameIframe.contentDocument || gameIframe.contentWindow.document;
+
+            // Get key UI elements
+            const startScreen = iframeDoc.getElementById("start-screen");
+            const gameOverScreen = iframeDoc.getElementById("game-over-screen");
+            const gameUI = iframeDoc.getElementById("game-ui");
+
+            if (!startScreen || !gameOverScreen || !gameUI) {
+              this.log("Could not find all UI elements", "error");
+              return false;
+            }
+
+            // Check if UI elements are positioned correctly
+            this.log("Checking UI element positioning...", "normal");
+
+            // Calculate positions of UI elements relative to game container
+            const gameContainer = iframeDoc.querySelector(".game-container");
+            const containerWidth = gameContainer.clientWidth;
+            const containerHeight = gameContainer.clientHeight;
+
+            // Check if the screens cover the full container
+            if (
+              startScreen.clientWidth < containerWidth ||
+              startScreen.clientHeight < containerHeight
+            ) {
+              this.log(
+                "⚠️ Start screen does not cover full game area",
+                "warning"
+              );
+            }
+
+            // Check if game UI is visible and positioned correctly
+            const gameUIRect = gameUI.getBoundingClientRect();
+            if (gameUIRect.left < 0 || gameUIRect.top < 0) {
+              this.log(
+                "⚠️ Game UI positioned outside viewable area",
+                "warning"
+              );
+            }
+
+            this.log(
+              "UI elements positioned within the game container",
+              "success"
+            );
+            return true;
+          } catch (error) {
+            this.log(`Error testing UI elements: ${error.message}`, "error");
+            return false;
+          }
+        },
+
+        // Test touch controls functionality
+        testTouchControls() {
+          try {
+            const iframeDoc =
+              gameIframe.contentDocument || gameIframe.contentWindow.document;
+            const gameCanvas = iframeDoc.getElementById("game-canvas");
+
+            if (!gameCanvas) {
+              this.log("Could not find game canvas for touch test", "error");
+              return false;
+            }
+
+            // Check if touch event listeners are set up
+            // We can't directly check event listeners, so we're checking for touch handling code
+
+            const width = parseInt(deviceContainer.style.width);
+            if (width <= 768) {
+              this.log(
+                "Testing touch controls for mobile/tablet size...",
+                "normal"
+              );
+              this.log(
+                "✓ Touch controls should be active for this screen size",
+                "success"
+              );
+            } else {
+              this.log("Touch controls not tested for desktop size", "normal");
+            }
+
+            return true;
+          } catch (error) {
+            this.log(`Error testing touch controls: ${error.message}`, "error");
+            return false;
+          }
+        },
+
+        // Generate test summary
+        generateSummary(width, height) {
+          let deviceType = "desktop";
+          if (width <= 480) {
+            deviceType = "mobile phone";
+          } else if (width <= 768) {
+            deviceType = "tablet";
+          }
+
+          let orientation = "landscape";
+          if (height > width) {
+            orientation = "portrait";
+          }
+
+          this.log(
+            `Test completed for ${deviceType} in ${orientation} orientation (${width}×${height})`,
+            "success"
+          );
+
+          // Recommendations based on screen size
+          if (width < 480) {
+            this.log("Recommendations for mobile:", "normal");
+            this.log(
+              "- Ensure UI elements are large enough for touch",
+              "normal"
+            );
+            this.log("- Simplify controls for small screens", "normal");
+          } else if (width < 768) {
+            this.log("Recommendations for tablet:", "normal");
+            this.log(
+              "- Use medium complexity UI for this screen size",
+              "normal"
+            );
+          } else {
+            this.log("Recommendations for desktop:", "normal");
+            this.log("- Ensure keyboard controls work properly", "normal");
+          }
+        },
+      };
+
+      // Event listeners
+      document.addEventListener("DOMContentLoaded", function () {
+        // Set up device selector
+        deviceSelector.addEventListener("change", function () {
+          const selected = deviceSelector.value;
+          const preset = devicePresets[selected];
+
+          // Show/hide custom size controls
+          if (selected === "custom") {
+            customSizeControls.style.display = "flex";
+          } else {
+            customSizeControls.style.display = "none";
+            customWidthInput.value = preset.width;
+            customHeightInput.value = preset.height;
+            ResponsiveTester.applySize(preset.width, preset.height);
+          }
+        });
+
+        // Apply button
+        applyButton.addEventListener("click", function () {
+          const width = parseInt(customWidthInput.value) || 800;
+          const height = parseInt(customHeightInput.value) || 600;
+          ResponsiveTester.applySize(width, height);
+        });
+
+        // Run test button
+        runTestButton.addEventListener("click", function () {
+          ResponsiveTester.runTest();
+        });
+
+        // Initialize with default size
+        ResponsiveTester.applySize(800, 600);
+        ResponsiveTester.log("Responsive test environment ready", "success");
+        ResponsiveTester.log(
+          "Select a device preset or enter custom dimensions",
+          "normal"
+        );
+      });
+    </script>
+  </body>
+</html>

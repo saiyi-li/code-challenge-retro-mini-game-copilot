@@ -17,14 +17,66 @@ const AssetGenerator = {
     powerups: ["#181425", "#7a3045", "#cc2a41", "#ff5e54", "#38b86e"],
   },
 
+  // Quality settings for different device capabilities
+  qualitySettings: {
+    low: {
+      backgroundDetailLevel: 0.5, // Reduce background details
+      animationFrameCount: 2, // Use fewer animation frames
+      particleEffects: false, // Disable particle effects
+      shadowEffects: false, // Disable shadow effects
+      backgroundSize: 0.75, // Scale down background size
+    },
+    medium: {
+      backgroundDetailLevel: 0.8,
+      animationFrameCount: 3,
+      particleEffects: true,
+      shadowEffects: false,
+      backgroundSize: 1.0,
+    },
+    high: {
+      backgroundDetailLevel: 1.0,
+      animationFrameCount: 4,
+      particleEffects: true,
+      shadowEffects: true,
+      backgroundSize: 1.0,
+    },
+  },
+
+  // Current quality setting
+  currentQuality: "high",
+
+  // Assets cache to avoid regenerating
+  assetsCache: {},
+
+  // Set the quality level for asset generation
+  setQuality(quality) {
+    if (this.qualitySettings[quality]) {
+      this.currentQuality = quality;
+      console.log(`Asset quality set to: ${quality}`);
+      return true;
+    }
+    console.warn(`Invalid quality level: ${quality}. Using high quality.`);
+    this.currentQuality = "high";
+    return false;
+  },
+
   /**
    * Generate a sprite sheet for a character with running animation
    * @returns {HTMLCanvasElement} Canvas element with the sprite sheet
    */
   generateCharacterSprite() {
+    const cacheKey = `character_${this.currentQuality}`;
+    if (this.assetsCache[cacheKey]) {
+      return this.assetsCache[cacheKey];
+    }
+
+    const settings = this.qualitySettings[this.currentQuality];
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    canvas.width = 192; // 4 frames x 48px
+
+    // Determine number of frames based on quality
+    const frameCount = settings.animationFrameCount;
+    canvas.width = frameCount * 48; // frameCount frames x 48px
     canvas.height = 48;
 
     // Frame 1: Standing
@@ -33,12 +85,19 @@ const AssetGenerator = {
     // Frame 2: Running pose 1
     this._drawCharacter(ctx, 48, 0, true, 1);
 
-    // Frame 3: Running pose 2
-    this._drawCharacter(ctx, 96, 0, true, 2);
+    // Additional frames based on quality
+    if (frameCount > 2) {
+      // Frame 3: Running pose 2
+      this._drawCharacter(ctx, 96, 0, true, 2);
+    }
 
-    // Frame 4: Jumping pose
-    this._drawCharacter(ctx, 144, 0, false, 0, true);
+    if (frameCount > 3) {
+      // Frame 4: Jumping pose
+      this._drawCharacter(ctx, 144, 0, false, 0, true);
+    }
 
+    // Cache and return
+    this.assetsCache[cacheKey] = canvas;
     return canvas;
   },
 
@@ -229,21 +288,35 @@ const AssetGenerator = {
    * @returns {Object} Object containing different background layer canvases
    */
   generateBackgroundLayers() {
-    return {
+    const cacheKey = `backgrounds_${this.currentQuality}`;
+    if (this.assetsCache[cacheKey]) {
+      return this.assetsCache[cacheKey];
+    }
+
+    const backgrounds = {
       far: this._generateFarBackgroundLayer(),
       mid: this._generateMidBackgroundLayer(),
       close: this._generateCloseBackgroundLayer(),
     };
+
+    // Cache and return
+    this.assetsCache[cacheKey] = backgrounds;
+    return backgrounds;
   },
 
   /**
    * Generate far background layer (mountains/sky)
    */
   _generateFarBackgroundLayer() {
+    const settings = this.qualitySettings[this.currentQuality];
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    canvas.width = 480;
-    canvas.height = 160;
+
+    // Scale canvas size based on quality
+    const baseWidth = 480;
+    const baseHeight = 160;
+    canvas.width = baseWidth * settings.backgroundSize;
+    canvas.height = baseHeight;
 
     const palette = this.palettes.environment;
 
@@ -253,12 +326,20 @@ const AssetGenerator = {
 
     // Far mountains
     ctx.fillStyle = palette[3];
-    for (let i = 0; i < canvas.width; i += 80) {
-      const height = 40 + Math.random() * 30;
+
+    // Adjust detail level based on quality
+    const mountainCount = Math.max(
+      3,
+      Math.floor((canvas.width / 80) * settings.backgroundDetailLevel)
+    );
+    const mountainSpacing = canvas.width / mountainCount;
+
+    for (let i = 0; i < canvas.width; i += mountainSpacing) {
+      const height = 40 + Math.random() * 30 * settings.backgroundDetailLevel;
       ctx.beginPath();
       ctx.moveTo(i, 160);
-      ctx.lineTo(i + 20, 160 - height);
-      ctx.lineTo(i + 80, 160);
+      ctx.lineTo(i + mountainSpacing / 4, 160 - height);
+      ctx.lineTo(i + mountainSpacing, 160);
       ctx.fill();
     }
 
@@ -420,41 +501,145 @@ const AssetGenerator = {
   },
 
   /**
-   * Generate all game assets
+   * Generate sounds for the game
+   * @returns {Object} Object containing game sound effects
    */
-  generateAllAssets() {
+  generateSounds() {
+    const cacheKey = `sounds_${this.currentQuality}`;
+    if (this.assetsCache[cacheKey]) {
+      return this.assetsCache[cacheKey];
+    }
+
+    // Create audio elements
+    const jumpSound = new Audio();
+    jumpSound.src = "assets/audio/jump.mp3"; // These would be actual audio files in production
+
+    const coinSound = new Audio();
+    coinSound.src = "assets/audio/coin.mp3";
+
+    const powerupSound = new Audio();
+    powerupSound.src = "assets/audio/powerup.mp3";
+
+    const gameOverSound = new Audio();
+    gameOverSound.src = "assets/audio/gameover.mp3";
+
+    // In low quality mode, we might disable some sounds
+    const sounds = {
+      jump: jumpSound,
+      coin: coinSound,
+      powerup: powerupSound,
+      gameOver: gameOverSound,
+    };
+
+    // Cache and return
+    this.assetsCache[cacheKey] = sounds;
+    return sounds;
+  },
+
+  /**
+   * Optimize assets for specific browsers
+   * @param {Object} assets - The generated assets
+   * @param {String} browserName - The name of the browser
+   * @returns {Object} - Optimized assets for the specific browser
+   */
+  optimizeForBrowser(assets, browserName) {
+    if (!assets) return assets;
+
+    // Apply browser-specific optimizations
+    switch (browserName.toLowerCase()) {
+      case "safari":
+        // Safari sometimes has issues with large canvas elements
+        console.log("Applying Safari-specific optimizations");
+        // No specific optimizations needed at this time
+        break;
+
+      case "firefox":
+        console.log("Applying Firefox-specific optimizations");
+        // No specific optimizations needed at this time
+        break;
+
+      case "edge":
+      case "chrome":
+        // These browsers generally handle the assets well
+        console.log(`No specific optimizations needed for ${browserName}`);
+        break;
+
+      default:
+        console.log("Using standard asset configuration");
+    }
+
+    return assets;
+  },
+
+  /**
+   * Clean up unused assets to free memory
+   * @param {Array} assetsToKeep - Array of asset keys to keep
+   */
+  cleanupUnusedAssets(assetsToKeep = []) {
+    const allKeys = Object.keys(this.assetsCache);
+
+    // If no specific keys to keep, preserve all assets
+    if (!assetsToKeep.length) return;
+
+    for (const key of allKeys) {
+      if (!assetsToKeep.includes(key)) {
+        delete this.assetsCache[key];
+        console.log(`Cleaned up unused asset: ${key}`);
+      }
+    }
+  },
+
+  /**
+   * Generate all game assets
+   * @param {String} quality - Quality level: 'low', 'medium', or 'high'
+   * @param {String} browserName - Optional: browser name for specific optimizations
+   * @returns {Object} - All game assets
+   */
+  generateAllAssets(quality = "high", browserName = "unknown") {
+    console.log(`Generating assets with ${quality} quality for ${browserName}`);
+
+    // Set quality level
+    this.setQuality(quality);
+
+    // Track asset generation performance
+    const startTime = performance.now();
+
     // Character sprite
     const characterSprite = this.generateCharacterSprite();
-    this.saveCanvasToFile(characterSprite, "assets/images/character.png");
 
     // Obstacle sprites
     const obstacleSprites = this.generateObstacleSprites();
-    this.saveCanvasToFile(obstacleSprites, "assets/images/obstacles.png");
 
     // Coin sprites
     const coinSprites = this.generateCoinSprites();
-    this.saveCanvasToFile(coinSprites, "assets/images/coins.png");
 
     // Background layers
     const backgroundLayers = this.generateBackgroundLayers();
-    this.saveCanvasToFile(backgroundLayers.far, "assets/images/bg-far.png");
-    this.saveCanvasToFile(backgroundLayers.mid, "assets/images/bg-mid.png");
-    this.saveCanvasToFile(backgroundLayers.close, "assets/images/bg-close.png");
 
     // Power-up sprites
     const powerUpSprites = this.generatePowerUpSprites();
-    this.saveCanvasToFile(powerUpSprites, "assets/images/powerups.png");
 
-    console.log("All assets generated successfully!");
+    // Sound effects
+    const sounds = this.generateSounds();
 
-    // Return all assets for direct use in the game
-    return {
+    const assets = {
       character: characterSprite,
       obstacles: obstacleSprites,
       coins: coinSprites,
       backgrounds: backgroundLayers,
       powerups: powerUpSprites,
+      sounds: sounds,
     };
+
+    // Optimize for specific browser if provided
+    const optimizedAssets = this.optimizeForBrowser(assets, browserName);
+
+    // Log performance metrics
+    console.log(
+      `Assets generated in ${(performance.now() - startTime).toFixed(2)}ms`
+    );
+
+    return optimizedAssets;
   },
 };
 

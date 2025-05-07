@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Retro Runner - Performance Tests</title>
+    <style>
+      body {
+        font-family: "Courier New", monospace;
+        background-color: #222;
+        color: #ddd;
+        margin: 0;
+        padding: 20px;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        color: #ff7700;
+      }
+
+      .test-panel {
+        background-color: #333;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      }
+
+      .test-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        background-color: #ff7700;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-family: "Courier New", monospace;
+        font-weight: bold;
+      }
+
+      button:hover {
+        background-color: #ff9900;
+      }
+
+      select {
+        padding: 10px;
+        background-color: #444;
+        color: #fff;
+        border: 1px solid #666;
+        border-radius: 3px;
+      }
+
+      .results-container {
+        margin-top: 20px;
+        border: 1px solid #555;
+        padding: 10px;
+        max-height: 500px;
+        overflow-y: auto;
+        background-color: #222;
+      }
+
+      .result-item {
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px dashed #444;
+      }
+
+      .result-item.success {
+        color: #4caf50;
+      }
+
+      .result-item.warning {
+        color: #ffc107;
+      }
+
+      .result-item.error {
+        color: #f44336;
+      }
+
+      .test-canvas {
+        border: 2px solid #ff7700;
+        margin: 10px 0;
+        width: 100%;
+        max-width: 800px;
+        height: 200px;
+        display: block;
+      }
+
+      .device-info {
+        margin-bottom: 15px;
+        font-size: 0.9em;
+        color: #aaa;
+      }
+
+      .metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .metric-box {
+        background-color: #444;
+        padding: 10px;
+        border-radius: 3px;
+        text-align: center;
+        flex: 1;
+        min-width: 120px;
+      }
+
+      .metric-label {
+        font-size: 0.8em;
+        margin-bottom: 5px;
+        color: #aaa;
+      }
+
+      .metric-value {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #ff7700;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Retro Runner Performance Test Suite</h1>
+      <p>
+        Test and optimize game performance across different browsers and devices
+      </p>
+    </header>
+
+    <div class="test-panel">
+      <div class="device-info" id="device-info">
+        Detecting device information...
+      </div>
+
+      <div class="test-controls">
+        <select id="quality-selector">
+          <option value="high">High Quality</option>
+          <option value="medium">Medium Quality</option>
+          <option value="low">Low Quality</option>
+        </select>
+
+        <button id="run-fps-test">Test FPS Performance</button>
+        <button id="run-load-test">Test Asset Loading</button>
+        <button id="run-memory-test">Test Memory Usage</button>
+        <button id="run-all-tests">Run All Tests</button>
+      </div>
+
+      <canvas
+        id="test-canvas"
+        class="test-canvas"
+        width="800"
+        height="200"
+      ></canvas>
+
+      <div class="metrics">
+        <div class="metric-box">
+          <div class="metric-label">AVG FPS</div>
+          <div class="metric-value" id="fps-value">-</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">LOAD TIME (ms)</div>
+          <div class="metric-value" id="load-time-value">-</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">MEMORY (MB)</div>
+          <div class="metric-value" id="memory-value">-</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-label">RENDER TIME (ms)</div>
+          <div class="metric-value" id="render-time-value">-</div>
+        </div>
+      </div>
+
+      <div class="results-container">
+        <h3>Test Results</h3>
+        <div id="results-log"></div>
+      </div>
+    </div>
+
+    <!-- Import asset generator -->
+    <script src="../js/asset-generator.js"></script>
+
+    <!-- Test script -->
+    <script>
+      // Device detection and information
+      function detectBrowserInfo() {
+        const userAgent = navigator.userAgent;
+        let browser = "Unknown";
+        let device = "Desktop";
+
+        // Detect browser
+        if (userAgent.match(/chrome|chromium|crios/i)) {
+          browser = "Chrome";
+        } else if (userAgent.match(/firefox|fxios/i)) {
+          browser = "Firefox";
+        } else if (userAgent.match(/safari/i)) {
+          browser = "Safari";
+        } else if (userAgent.match(/opr\//i)) {
+          browser = "Opera";
+        } else if (userAgent.match(/edg/i)) {
+          browser = "Edge";
+        }
+
+        // Detect device type
+        if (
+          /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            userAgent
+          )
+        ) {
+          device = "Mobile";
+        } else if (/iPad|Tablet|PlayBook/i.test(userAgent)) {
+          device = "Tablet";
+        }
+
+        return {
+          browser,
+          device,
+          os: navigator.platform,
+          screenSize: `${window.innerWidth}x${window.innerHeight}`,
+          pixelRatio: window.devicePixelRatio,
+        };
+      }
+
+      // Performance testing utilities
+      const PerformanceTester = {
+        testCanvas: document.getElementById("test-canvas"),
+        testCtx: document.getElementById("test-canvas").getContext("2d"),
+        resultsLog: document.getElementById("results-log"),
+        metrics: {
+          fps: document.getElementById("fps-value"),
+          loadTime: document.getElementById("load-time-value"),
+          memory: document.getElementById("memory-value"),
+          renderTime: document.getElementById("render-time-value"),
+        },
+
+        // Test asset loading performance
+        testAssetLoading(quality) {
+          const startTime = performance.now();
+          let loadTime;
+
+          this.log("Starting asset loading test...", "normal");
+
+          try {
+            // Generate assets with specified quality
+            const assets = AssetGenerator.generateAllAssets(
+              quality,
+              detectBrowserInfo().browser
+            );
+            loadTime = performance.now() - startTime;
+            this.metrics.loadTime.textContent = Math.round(loadTime);
+
+            // Display assets on test canvas
+            this.displayAssets(assets);
+
+            this.log(
+              `✅ Assets loaded successfully in ${loadTime.toFixed(2)}ms`,
+              "success"
+            );
+            return { success: true, loadTime, assets };
+          } catch (error) {
+            this.log(`❌ Asset loading failed: ${error.message}`, "error");
+            return { success: false, error };
+          }
+        },
+
+        // Test FPS performance
+        testFpsPerformance(duration = 5000, quality = "high") {
+          return new Promise((resolve) => {
+            this.log(
+              `Starting FPS test for ${
+                duration / 1000
+              }s with ${quality} quality...`,
+              "normal"
+            );
+
+            // Generate test assets
+            const assets = AssetGenerator.generateAllAssets(quality);
+            const testObjects = this.generateTestObjects(30); // Generate 30 test objects
+
+            let frames = 0;
+            const startTime = performance.now();
+            let lastRenderTime = 0;
+            let totalRenderTime = 0;
+
+            const testLoop = (timestamp) => {
+              frames++;
+
+              // Measure render time
+              const renderStart = performance.now();
+
+              // Clear canvas
+              this.testCtx.clearRect(
+                0,
+                0,
+                this.testCanvas.width,
+                this.testCanvas.height
+              );
+
+              // Draw background
+              this.testCtx.fillStyle = "#333";
+              this.testCtx.fillRect(
+                0,
+                0,
+                this.testCanvas.width,
+                this.testCanvas.height
+              );
+
+              // Draw moving objects to simulate game rendering
+              testObjects.forEach((obj) => {
+                // Update position
+                obj.x += obj.speedX;
+                obj.y += obj.speedY;
+
+                // Bounce off walls
+                if (obj.x < 0 || obj.x > this.testCanvas.width - obj.width) {
+                  obj.speedX *= -1;
+                }
+                if (obj.y < 0 || obj.y > this.testCanvas.height - obj.height) {
+                  obj.speedY *= -1;
+                }
+
+                // Draw object
+                if (assets.powerups) {
+                  this.testCtx.drawImage(
+                    assets.powerups,
+                    obj.type * 24,
+                    0,
+                    24,
+                    24,
+                    obj.x,
+                    obj.y,
+                    obj.width,
+                    obj.height
+                  );
+                } else {
+                  // Fallback
+                  this.testCtx.fillStyle = ["#ff5e54", "#38b86e", "#fee761"][
+                    obj.type
+                  ];
+                  this.testCtx.fillRect(obj.x, obj.y, obj.width, obj.height);
+                }
+              });
+
+              // Calculate render time
+              const renderTime = performance.now() - renderStart;
+              totalRenderTime += renderTime;
+              lastRenderTime = renderTime;
+
+              // Update metrics in real-time
+              if (frames % 10 === 0) {
+                const currentDuration = performance.now() - startTime;
+                const currentFps = (frames / (currentDuration / 1000)).toFixed(
+                  1
+                );
+                this.metrics.fps.textContent = currentFps;
+                this.metrics.renderTime.textContent = lastRenderTime.toFixed(1);
+              }
+
+              // Check if test should continue
+              if (performance.now() - startTime < duration) {
+                requestAnimationFrame(testLoop);
+              } else {
+                // Test completed
+                const totalTime = performance.now() - startTime;
+                const avgFps = (frames / (totalTime / 1000)).toFixed(1);
+                const avgRenderTime = (totalRenderTime / frames).toFixed(2);
+
+                this.metrics.fps.textContent = avgFps;
+
+                if (avgFps < 30) {
+                  this.log(
+                    `⚠️ Low performance detected: ${avgFps} FPS`,
+                    "warning"
+                  );
+                } else {
+                  this.log(
+                    `✅ Performance test completed: ${avgFps} FPS`,
+                    "success"
+                  );
+                }
+
+                this.log(`Average render time: ${avgRenderTime}ms`, "normal");
+
+                resolve({
+                  fps: parseFloat(avgFps),
+                  frames,
+                  duration: totalTime,
+                  renderTime: parseFloat(avgRenderTime),
+                });
+              }
+            };
+
+            // Start the test loop
+            requestAnimationFrame(testLoop);
+          });
+        },
+
+        // Test memory usage
+        testMemoryUsage() {
+          this.log("Starting memory usage test...", "normal");
+
+          // Check if performance.memory is available (Chrome only)
+          if (performance.memory) {
+            const memoryUsed =
+              performance.memory.usedJSHeapSize / (1024 * 1024);
+            const memoryLimit =
+              performance.memory.jsHeapSizeLimit / (1024 * 1024);
+            const memoryPercentage = ((memoryUsed / memoryLimit) * 100).toFixed(
+              1
+            );
+
+            this.metrics.memory.textContent = memoryUsed.toFixed(1);
+
+            this.log(
+              `Memory usage: ${memoryUsed.toFixed(1)}MB / ${memoryLimit.toFixed(
+                0
+              )}MB (${memoryPercentage}%)`,
+              "normal"
+            );
+
+            if (memoryPercentage > 80) {
+              this.log("⚠️ High memory usage detected", "warning");
+            }
+
+            return {
+              memory: memoryUsed,
+              limit: memoryLimit,
+              percentage: memoryPercentage,
+            };
+          } else {
+            this.log(
+              "⚠️ Memory measurement not supported in this browser",
+              "warning"
+            );
+            this.metrics.memory.textContent = "N/A";
+            return null;
+          }
+        },
+
+        // Generate test objects for rendering test
+        generateTestObjects(count) {
+          const objects = [];
+          for (let i = 0; i < count; i++) {
+            objects.push({
+              x: Math.random() * (this.testCanvas.width - 24),
+              y: Math.random() * (this.testCanvas.height - 24),
+              width: 24,
+              height: 24,
+              speedX: (Math.random() - 0.5) * 4,
+              speedY: (Math.random() - 0.5) * 4,
+              type: Math.floor(Math.random() * 3),
+            });
+          }
+          return objects;
+        },
+
+        // Display assets on the test canvas
+        displayAssets(assets) {
+          if (!assets) return;
+
+          // Clear canvas
+          this.testCtx.clearRect(
+            0,
+            0,
+            this.testCanvas.width,
+            this.testCanvas.height
+          );
+
+          // Draw background
+          this.testCtx.fillStyle = "#4a608c";
+          this.testCtx.fillRect(
+            0,
+            0,
+            this.testCanvas.width,
+            this.testCanvas.height
+          );
+
+          // Draw background layers if available
+          if (assets.backgrounds) {
+            this.testCtx.drawImage(assets.backgrounds.far, 0, 0);
+          }
+
+          // Draw ground
+          this.testCtx.fillStyle = "#3a4466";
+          this.testCtx.fillRect(
+            0,
+            this.testCanvas.height - 40,
+            this.testCanvas.width,
+            40
+          );
+
+          // Draw character
+          if (assets.character) {
+            this.testCtx.drawImage(
+              assets.character,
+              0,
+              0,
+              48,
+              48,
+              100,
+              this.testCanvas.height - 88,
+              48,
+              48
+            );
+          }
+
+          // Draw some obstacles
+          if (assets.obstacles) {
+            for (let i = 0; i < 3; i++) {
+              this.testCtx.drawImage(
+                assets.obstacles,
+                i * 48,
+                0,
+                48,
+                48,
+                200 + i * 100,
+                this.testCanvas.height - 88,
+                48,
+                48
+              );
+            }
+          }
+
+          // Draw some coins
+          if (assets.coins) {
+            for (let i = 0; i < 4; i++) {
+              this.testCtx.drawImage(
+                assets.coins,
+                i * 24,
+                0,
+                24,
+                24,
+                300 + i * 40,
+                this.testCanvas.height - 120,
+                24,
+                24
+              );
+            }
+          }
+        },
+
+        // Run all tests
+        async runAllTests(quality = "high") {
+          this.log(
+            `Running all performance tests with ${quality} quality...`,
+            "normal"
+          );
+
+          // Clear previous results
+          this.clearResults();
+
+          // Test asset loading
+          const loadResult = this.testAssetLoading(quality);
+
+          // Test FPS
+          const fpsResult = await this.testFpsPerformance(3000, quality);
+
+          // Test memory
+          const memoryResult = this.testMemoryUsage();
+
+          // Generate summary
+          let performanceRating = "Excellent";
+
+          if (
+            fpsResult.fps < 30 ||
+            (memoryResult && memoryResult.percentage > 80)
+          ) {
+            performanceRating = "Poor";
+          } else if (
+            fpsResult.fps < 50 ||
+            (memoryResult && memoryResult.percentage > 60)
+          ) {
+            performanceRating = "Average";
+          }
+
+          this.log(
+            `Overall performance rating: ${performanceRating}`,
+            performanceRating === "Excellent"
+              ? "success"
+              : performanceRating === "Average"
+              ? "warning"
+              : "error"
+          );
+
+          // Provide optimization suggestions
+          if (performanceRating !== "Excellent") {
+            this.log("Optimization suggestions:", "normal");
+
+            if (fpsResult.fps < 50) {
+              this.log("- Try lower quality setting", "normal");
+              this.log("- Reduce number of on-screen objects", "normal");
+            }
+
+            if (memoryResult && memoryResult.percentage > 60) {
+              this.log("- Use fewer background elements", "normal");
+              this.log("- Optimize asset size", "normal");
+            }
+          }
+
+          return {
+            loading: loadResult,
+            fps: fpsResult,
+            memory: memoryResult,
+            rating: performanceRating,
+          };
+        },
+
+        // Log a message to the results container
+        log(message, type = "normal") {
+          const logItem = document.createElement("div");
+          logItem.className = `result-item ${type}`;
+          logItem.textContent = message;
+          this.resultsLog.prepend(logItem);
+        },
+
+        // Clear all results
+        clearResults() {
+          this.resultsLog.innerHTML = "";
+          this.metrics.fps.textContent = "-";
+          this.metrics.loadTime.textContent = "-";
+          this.metrics.memory.textContent = "-";
+          this.metrics.renderTime.textContent = "-";
+        },
+      };
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", function () {
+        // Display device info
+        const deviceInfo = detectBrowserInfo();
+        document.getElementById("device-info").innerHTML = `
+        Browser: <strong>${deviceInfo.browser}</strong> | 
+        Device: <strong>${deviceInfo.device}</strong> | 
+        OS: <strong>${deviceInfo.os}</strong> | 
+        Screen: <strong>${deviceInfo.screenSize}</strong> | 
+        Pixel Ratio: <strong>${deviceInfo.pixelRatio}x</strong>
+      `;
+
+        // Event listeners for test buttons
+        document
+          .getElementById("run-fps-test")
+          .addEventListener("click", function () {
+            const quality = document.getElementById("quality-selector").value;
+            PerformanceTester.testFpsPerformance(5000, quality);
+          });
+
+        document
+          .getElementById("run-load-test")
+          .addEventListener("click", function () {
+            const quality = document.getElementById("quality-selector").value;
+            PerformanceTester.testAssetLoading(quality);
+          });
+
+        document
+          .getElementById("run-memory-test")
+          .addEventListener("click", function () {
+            PerformanceTester.testMemoryUsage();
+          });
+
+        document
+          .getElementById("run-all-tests")
+          .addEventListener("click", function () {
+            const quality = document.getElementById("quality-selector").value;
+            PerformanceTester.runAllTests(quality);
+          });
+
+        // Log startup
+        PerformanceTester.log("Performance test suite initialized", "success");
+        PerformanceTester.log("Select quality level and run tests", "normal");
+      });
+    </script>
+  </body>
+</html>

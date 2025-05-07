@@ -7,7 +7,7 @@
 | Setup             | Completed   | May 7, 2025          |
 | Assets            | Completed   | May 7, 2025          |
 | Core Mechanics    | In Progress | -                    |
-| Optional Features | Not Started | -                    |
+| Optional Features | Completed   | May 7, 2025          |
 | UI                | In Progress | -                    |
 | Testing           | Not Started | -                    |
 | Polishing         | Not Started | -                    |
@@ -43,9 +43,9 @@
 
 ### 5. Optional Features Implementation
 
-- [ ] Design power-up mechanics (speed boost, invincibility)
-- [ ] Implement power-up spawning logic
-- [ ] Create visual effects for active power-ups
+- [x] Design power-up mechanics (speed boost, invincibility)
+- [x] Implement power-up spawning logic
+- [x] Create visual effects for active power-ups
 
 ### 6. UI Development
 

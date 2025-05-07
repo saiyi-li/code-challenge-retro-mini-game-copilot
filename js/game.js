@@ -41,10 +41,19 @@ let player = {
   frameX: 0, // Current animation frame
   frameTimer: 0, // Timer for animations
   animationSpeed: 0.15, // Seconds per frame
+  // Power-up related properties
+  hasPowerUp: false,
+  powerUpType: null,
+  powerUpTimeLeft: 0,
+  isInvincible: false,
+  hasDoublePoints: false,
+  speedBoost: 0,
+  effectDisplay: { alpha: 0, pulse: 0 }, // For visual effects
 };
 
 let obstacles = [];
 let coins = [];
+let powerUps = []; // Array to store active power-ups in the game
 let backgrounds = {
   far: { x: 0, speed: 0.2 },
   mid: { x: 0, speed: 0.5 },
@@ -56,6 +65,10 @@ const JUMP_FORCE = -800;
 const GRAVITY = 1800;
 const OBSTACLE_SPAWN_RATE = 0.5; // % chance per second
 const COIN_SPAWN_RATE = 1; // % chance per second
+const POWER_UP_SPAWN_RATE = 0.2; // % chance per second (rarer than coins)
+const POWER_UP_DURATION = 10; // Power-up duration in seconds
+const SPEED_BOOST_MULTIPLIER = 1.5; // How much faster with speed boost
+const DOUBLE_POINTS_MULTIPLIER = 2; // How many extra points for double points
 
 // Responsive canvas sizing
 function resizeCanvas() {
@@ -107,8 +120,18 @@ function init() {
   player.frameX = 0;
   player.frameTimer = 0;
 
+  // Reset power-up properties
+  player.hasPowerUp = false;
+  player.powerUpType = null;
+  player.powerUpTimeLeft = 0;
+  player.isInvincible = false;
+  player.hasDoublePoints = false;
+  player.speedBoost = 0;
+  player.effectDisplay = { alpha: 0, pulse: 0 };
+
   obstacles = [];
   coins = [];
+  powerUps = [];
 
   // Start the game loop
   lastTime = performance.now();
@@ -155,11 +178,19 @@ function update(deltaTime) {
     spawnCoin();
   }
 
+  // Spawn power-ups (more rare than coins)
+  if (Math.random() < POWER_UP_SPAWN_RATE * deltaTime) {
+    spawnPowerUp();
+  }
+
   // Update obstacles
   updateObstacles(deltaTime);
 
   // Update coins
   updateCoins(deltaTime);
+
+  // Update power-ups
+  updatePowerUps(deltaTime);
 
   // Update backgrounds for parallax effect
   updateBackgrounds(deltaTime);
@@ -199,8 +230,14 @@ function updateObstacles(deltaTime) {
   for (let i = obstacles.length - 1; i >= 0; i--) {
     const obstacle = obstacles[i];
 
+    // Apply speed boost effect if active
+    let currentSpeed = speed;
+    if (player.hasPowerUp && player.speedBoost > 0) {
+      currentSpeed *= player.speedBoost;
+    }
+
     // Move obstacle
-    obstacle.x -= (speed + obstacle.speedMod) * deltaTime * 60;
+    obstacle.x -= (currentSpeed + obstacle.speedMod) * deltaTime * 60;
 
     // Check if obstacle is off screen
     if (obstacle.x < -obstacle.width) {
@@ -208,8 +245,8 @@ function updateObstacles(deltaTime) {
       continue;
     }
 
-    // Check collision with player
-    if (checkCollision(player, obstacle)) {
+    // Check collision with player unless invincible
+    if (checkCollision(player, obstacle) && !player.isInvincible) {
       gameOver();
       return;
     }
@@ -239,9 +276,33 @@ function updateCoins(deltaTime) {
 
     // Check if player collected the coin
     if (checkCollision(player, coin)) {
-      // Update score
-      score++;
+      // Update score - double points if power-up is active
+      const pointsToAdd = player.hasDoublePoints ? DOUBLE_POINTS_MULTIPLIER : 1;
+      score += pointsToAdd;
       scoreElement.textContent = score;
+
+      // If double points is active, show visual feedback
+      if (player.hasDoublePoints) {
+        // Create a temporary floating score text
+        const floatingText = {
+          x: coin.x,
+          y: coin.y,
+          text: `+${pointsToAdd}`,
+          alpha: 1.0,
+          life: 0.6, // life in seconds
+        };
+
+        // This is a simple way to display the text
+        setTimeout(() => {
+          const displayInterval = setInterval(() => {
+            floatingText.y -= 1;
+            floatingText.alpha -= 0.05;
+            if (floatingText.alpha <= 0) {
+              clearInterval(displayInterval);
+            }
+          }, 30);
+        }, 0);
+      }
 
       // Increase speed gradually
       if (score % 10 === 0) {
@@ -252,6 +313,92 @@ function updateCoins(deltaTime) {
       coins.splice(i, 1);
     }
   }
+}
+
+// Update power-ups
+function updatePowerUps(deltaTime) {
+  // Update existing power-ups in the game world
+  for (let i = powerUps.length - 1; i >= 0; i--) {
+    const powerUp = powerUps[i];
+
+    // Move power-up
+    powerUp.x -= speed * deltaTime * 60;
+
+    // Animate power-up (pulsing effect)
+    powerUp.frameTimer += deltaTime;
+    if (powerUp.frameTimer >= powerUp.animationSpeed) {
+      powerUp.frameTimer = 0;
+      powerUp.pulse = (powerUp.pulse + 1) % 20;
+    }
+
+    // Check if power-up is off screen
+    if (powerUp.x < -powerUp.width) {
+      powerUps.splice(i, 1);
+      continue;
+    }
+
+    // Check if player collected the power-up
+    if (checkCollision(player, powerUp)) {
+      // Apply power-up effect
+      applyPowerUp(powerUp.type);
+
+      // Remove power-up
+      powerUps.splice(i, 1);
+    }
+  }
+
+  // Update active power-up timer if player has one
+  if (player.hasPowerUp) {
+    player.powerUpTimeLeft -= deltaTime;
+
+    // Update visual effects for the power-up
+    player.effectDisplay.pulse =
+      (player.effectDisplay.pulse + deltaTime * 5) % (Math.PI * 2);
+    player.effectDisplay.alpha =
+      0.3 + Math.sin(player.effectDisplay.pulse) * 0.1;
+
+    // Check if power-up has expired
+    if (player.powerUpTimeLeft <= 0) {
+      removePowerUpEffects();
+    }
+  }
+}
+
+// Apply power-up effect based on type
+function applyPowerUp(type) {
+  // Reset any existing power-up
+  removePowerUpEffects();
+
+  // Set power-up active
+  player.hasPowerUp = true;
+  player.powerUpType = type;
+  player.powerUpTimeLeft = POWER_UP_DURATION;
+
+  // Apply specific power-up effect
+  switch (type) {
+    case 0: // Speed boost
+      player.speedBoost = SPEED_BOOST_MULTIPLIER;
+      console.log("Speed boost activated!");
+      break;
+    case 1: // Invincibility
+      player.isInvincible = true;
+      console.log("Invincibility activated!");
+      break;
+    case 2: // Double points
+      player.hasDoublePoints = true;
+      console.log("Double points activated!");
+      break;
+  }
+}
+
+// Remove all power-up effects
+function removePowerUpEffects() {
+  player.hasPowerUp = false;
+  player.powerUpType = null;
+  player.powerUpTimeLeft = 0;
+  player.isInvincible = false;
+  player.hasDoublePoints = false;
+  player.speedBoost = 0;
 }
 
 // Update background layers for parallax effect
@@ -291,6 +438,24 @@ function spawnCoin() {
     animationSpeed: 0.1 + Math.random() * 0.1, // Random animation speed
   };
   coins.push(coin);
+}
+
+// Spawn power-up
+function spawnPowerUp() {
+  // Random power-up type: 0 = speed boost, 1 = invincibility, 2 = double points
+  const powerUpType = Math.floor(Math.random() * 3);
+  const powerUp = {
+    x: canvas.width,
+    y: canvas.height - GROUND_HEIGHT - 24 - Math.random() * 100, // Random height
+    width: 24,
+    height: 24,
+    type: powerUpType,
+    frameX: 0,
+    frameTimer: 0,
+    animationSpeed: 0.08, // Slower animation than coins
+    pulse: 0, // For visual pulsing effect
+  };
+  powerUps.push(powerUp);
 }
 
 // Check collision between two objects
@@ -372,7 +537,38 @@ function render() {
     }
   });
 
-  // Draw player
+  // Draw power-ups
+  powerUps.forEach((powerUp) => {
+    if (gameAssets && gameAssets.powerups) {
+      // Draw power-up sprite from spritesheet with pulsing effect
+      const pulseScale = 1 + Math.sin(powerUp.pulse * 0.3) * 0.1;
+      const scaledWidth = powerUp.width * pulseScale;
+      const scaledHeight = powerUp.height * pulseScale;
+      const offsetX = (scaledWidth - powerUp.width) / 2;
+      const offsetY = (scaledHeight - powerUp.height) / 2;
+
+      ctx.drawImage(
+        gameAssets.powerups,
+        powerUp.type * 24,
+        0,
+        24,
+        24,
+        powerUp.x - offsetX,
+        powerUp.y - offsetY,
+        scaledWidth,
+        scaledHeight
+      );
+    } else {
+      // Fallback to a simple shape
+      const colors = ["#ff5e54", "#38b86e", "#fee761"];
+      ctx.fillStyle = colors[powerUp.type];
+      ctx.beginPath();
+      ctx.arc(powerUp.x + 12, powerUp.y + 12, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // Draw player with power-up effect if active
   if (gameAssets && gameAssets.character) {
     // Draw player sprite from spritesheet
     ctx.drawImage(
@@ -386,6 +582,59 @@ function render() {
       player.width,
       player.height
     );
+
+    // Add visual effect when player has active power-up
+    if (player.hasPowerUp) {
+      ctx.save();
+
+      // Different color overlays based on power-up type
+      switch (player.powerUpType) {
+        case 0: // Speed boost - blue trail effect
+          ctx.globalAlpha = player.effectDisplay.alpha;
+          ctx.fillStyle = "rgba(80, 200, 255, 0.6)";
+          ctx.fillRect(player.x - 10, player.y, 10, player.height);
+          break;
+        case 1: // Invincibility - shield/glow effect
+          ctx.globalAlpha = player.effectDisplay.alpha;
+          ctx.strokeStyle = "rgba(255, 255, 100, 0.8)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(
+            player.x + player.width / 2,
+            player.y + player.height / 2,
+            player.width / 2 + 5,
+            0,
+            Math.PI * 2
+          );
+          ctx.stroke();
+          break;
+        case 2: // Double points - sparkle effect
+          ctx.globalAlpha = player.effectDisplay.alpha;
+          ctx.fillStyle = "rgba(255, 100, 255, 0.7)";
+          for (let i = 0; i < 3; i++) {
+            const x = player.x + Math.random() * player.width;
+            const y = player.y + Math.random() * player.height;
+            const size = 3 + Math.random() * 4;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          break;
+      }
+
+      // Display power-up time remaining
+      const timeLeft = Math.ceil(player.powerUpTimeLeft);
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 14px Arial";
+      ctx.fillText(
+        timeLeft.toString(),
+        player.x + player.width / 2 - 4,
+        player.y - 5
+      );
+
+      ctx.restore();
+    }
   } else {
     // Fallback to a simple rectangle
     ctx.fillStyle = "#ff7700";
@@ -413,6 +662,20 @@ function render() {
       ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
     }
   });
+
+  // If player has an active power-up, show an indicator
+  if (player.hasPowerUp) {
+    const powerUpLabels = ["SPEED", "SHIELD", "2X PTS"];
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 14px Arial";
+    ctx.fillText(
+      `${powerUpLabels[player.powerUpType]}: ${Math.ceil(
+        player.powerUpTimeLeft
+      )}s`,
+      10,
+      30
+    );
+  }
 }
 
 // Render a background layer with tiling if needed
@@ -434,21 +697,21 @@ function gameOver() {
 // Setup all event listeners
 function setupEventListeners() {
   console.log("Setting up event listeners");
-  
+
   // Button controls
   if (startButton) {
     console.log("Start button found, attaching event listener");
-    startButton.addEventListener("click", function() {
+    startButton.addEventListener("click", function () {
       console.log("Start button clicked");
       init();
     });
   } else {
     console.error("Start button not found!");
   }
-  
+
   if (restartButton) {
     console.log("Restart button found, attaching event listener");
-    restartButton.addEventListener("click", function() {
+    restartButton.addEventListener("click", function () {
       console.log("Restart button clicked");
       init();
     });
@@ -462,13 +725,22 @@ function setupEventListeners() {
       if (!gameActive && startScreen.classList.contains("hidden") === false) {
         console.log("Starting game with space bar");
         init();
-      } else if (!gameActive && gameOverScreen.classList.contains("hidden") === false) {
+      } else if (
+        !gameActive &&
+        gameOverScreen.classList.contains("hidden") === false
+      ) {
         console.log("Restarting game with space bar");
         init();
       } else if (gameActive) {
         playerJump();
       }
-    } else if (gameActive && (e.key === "ArrowUp" || e.key === "w" || e.code === "ArrowUp" || e.code === "KeyW")) {
+    } else if (
+      gameActive &&
+      (e.key === "ArrowUp" ||
+        e.key === "w" ||
+        e.code === "ArrowUp" ||
+        e.code === "KeyW")
+    ) {
       playerJump();
     }
   });
@@ -479,9 +751,9 @@ function setupEventListeners() {
       playerJump();
     }
   });
-  
+
   // Handle clicking anywhere on the start screen to start the game
-  startScreen.addEventListener("click", function() {
+  startScreen.addEventListener("click", function () {
     console.log("Start screen clicked");
     if (!gameActive) {
       init();
@@ -493,11 +765,11 @@ function setupEventListeners() {
 }
 
 // Initialize canvas size and event listeners on load
-window.addEventListener("load", function() {
+window.addEventListener("load", function () {
   console.log("Window loaded");
   resizeCanvas();
   setupEventListeners();
-  
+
   // Display start screen initially
   canvas.style.opacity = 0.3;
 });

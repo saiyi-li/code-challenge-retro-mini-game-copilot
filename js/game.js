@@ -32,8 +32,17 @@ let speed = 5;
 let lastTime = 0;
 let deltaTime = 0;
 
+// Difficulty progression system
+let difficultyLevel = 1;
+let nextDifficultyThreshold = 50; // Score needed for next difficulty increase
+let difficultyProgressPercent = 0; // Visual progress toward next difficulty
+
 // Game assets
 let gameAssets = null;
+
+// Particle system for visual effects
+let particles = [];
+const MAX_PARTICLES = 30; // Limit to avoid performance issues
 
 // Game objects
 let player = {
@@ -237,6 +246,9 @@ function init() {
   gameActive = true;
   score = 0;
   speed = 5;
+  difficultyLevel = 1;
+  nextDifficultyThreshold = 50;
+  difficultyProgressPercent = 0;
   scoreElement.textContent = score;
 
   // Reset game objects
@@ -259,6 +271,7 @@ function init() {
   obstacles = [];
   coins = [];
   powerUps = [];
+  particles = [];
 
   // Reset FPS counter
   fpsCounter.frames = 0;
@@ -364,6 +377,9 @@ function update(deltaTime) {
   // Update power-ups
   updatePowerUps(deltaTime);
 
+  // Update particles
+  updateParticles(deltaTime);
+
   // Update backgrounds for parallax effect
   updateBackgrounds(deltaTime);
 }
@@ -453,6 +469,9 @@ function updateCoins(deltaTime) {
       score += pointsToAdd;
       scoreElement.textContent = score;
 
+      // Update difficulty progression
+      updateDifficultyProgression(pointsToAdd);
+
       // If double points is active, show visual feedback
       if (player.hasDoublePoints) {
         // Create a temporary floating score text
@@ -483,7 +502,22 @@ function updateCoins(deltaTime) {
 
       // Remove coin
       coins.splice(i, 1);
+
+      // Create particles for visual effect
+      createParticles(coin.x, coin.y, "#feae34", 10, 1);
     }
+  }
+}
+
+// Update difficulty progression based on score
+function updateDifficultyProgression(points) {
+  // Calculate progress toward next difficulty level
+  difficultyProgressPercent =
+    ((score % nextDifficultyThreshold) / nextDifficultyThreshold) * 100;
+
+  // Check if we should increase difficulty
+  if (score >= difficultyLevel * nextDifficultyThreshold) {
+    increaseDifficulty();
   }
 }
 
@@ -516,6 +550,10 @@ function updatePowerUps(deltaTime) {
 
       // Remove power-up
       powerUps.splice(i, 1);
+
+      // Create particles for visual effect
+      const colors = ["#ff5e54", "#38b86e", "#fee761"];
+      createParticles(powerUp.x, powerUp.y, colors[powerUp.type], 15, 1.5);
     }
   }
 
@@ -856,6 +894,9 @@ function render() {
       ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
     }
   });
+
+  // Render particles
+  renderParticles();
 
   // If player has an active power-up, show an indicator
   if (player.hasPowerUp) {
@@ -1213,3 +1254,216 @@ window.addEventListener("keydown", (e) => {
     adjustGameDifficultyForDevice();
   }
 });
+
+// Create particles for visual effects
+function createParticles(x, y, color, count, speedMultiplier = 1) {
+  // Limit particles based on performance settings
+  if (browserInfo.isLowEnd) count = Math.floor(count * 0.5);
+
+  // Don't exceed maximum particle count
+  const availableSlots = MAX_PARTICLES - particles.length;
+  if (availableSlots <= 0) return;
+
+  // Adjust count to available slots
+  count = Math.min(count, availableSlots);
+
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (1 + Math.random() * 2) * speedMultiplier;
+
+    particles.push({
+      x: x,
+      y: y,
+      size: 2 + Math.random() * 3,
+      color: color,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 1, // Slight upward bias
+      life: 0.5 + Math.random() * 0.5, // Life in seconds
+      gravity: 0.5,
+      alpha: 1,
+    });
+  }
+}
+
+// Update all particles
+function updateParticles(deltaTime) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const particle = particles[i];
+
+    // Update position
+    particle.x += particle.vx;
+    particle.y += particle.vy;
+
+    // Apply gravity
+    particle.vy += particle.gravity * deltaTime;
+
+    // Update life and fade out
+    particle.life -= deltaTime;
+    particle.alpha = particle.life / 0.5; // Fade based on remaining life
+
+    // Remove dead particles
+    if (particle.life <= 0) {
+      particles.splice(i, 1);
+    }
+  }
+}
+
+// Render particles
+function renderParticles() {
+  ctx.save();
+
+  // Draw all active particles
+  for (let i = 0; i < particles.length; i++) {
+    const particle = particles[i];
+    ctx.globalAlpha = particle.alpha;
+    ctx.fillStyle = particle.color;
+    ctx.beginPath();
+    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// Increase difficulty when reaching threshold
+function increaseDifficulty() {
+  difficultyLevel++;
+
+  // Create a visual effect for level up
+  createLevelUpEffect();
+
+  // Scale difficulty based on level
+  OBSTACLE_SPAWN_RATE += 0.1;
+  POWER_UP_SPAWN_RATE = Math.max(0.05, POWER_UP_SPAWN_RATE - 0.02); // Power-ups get rarer
+
+  // Increase speed slightly
+  speed += currentDifficulty.speedIncrement;
+
+  console.log(`Difficulty increased to level ${difficultyLevel}`);
+}
+
+// Create visual effect for level up
+function createLevelUpEffect() {
+  // Create particles all across the bottom of the screen
+  for (let x = 0; x < canvas.width; x += 50) {
+    createParticles(x, canvas.height - GROUND_HEIGHT - 10, "#ffffff", 5, 2);
+  }
+
+  // Create particles around the player for more emphasis
+  createParticles(
+    player.x + player.width / 2,
+    player.y + player.height / 2,
+    "#ffff00", // Golden color
+    20,
+    2.5
+  );
+
+  // Flash screen effect (if not on low-end device)
+  if (!browserInfo.isLowEnd) {
+    const flashOverlay = document.createElement("div");
+    flashOverlay.style.position = "absolute";
+    flashOverlay.style.top = "0";
+    flashOverlay.style.left = "0";
+    flashOverlay.style.width = "100%";
+    flashOverlay.style.height = "100%";
+    flashOverlay.style.backgroundColor = "rgba(255, 255, 255, 0.3)";
+    flashOverlay.style.pointerEvents = "none";
+    flashOverlay.style.zIndex = "10";
+    flashOverlay.style.opacity = "0.7";
+    flashOverlay.style.transition = "opacity 0.5s ease-out";
+
+    document.querySelector(".game-container").appendChild(flashOverlay);
+
+    setTimeout(() => {
+      flashOverlay.style.opacity = "0";
+      setTimeout(() => flashOverlay.remove(), 500);
+    }, 100);
+
+    // Display level-up text animation
+    const levelUpText = document.createElement("div");
+    levelUpText.textContent = `LEVEL ${difficultyLevel}!`;
+    levelUpText.style.position = "absolute";
+    levelUpText.style.top = "40%";
+    levelUpText.style.left = "50%";
+    levelUpText.style.transform = "translate(-50%, -50%) scale(0.5)";
+    levelUpText.style.color = "#ffff00";
+    levelUpText.style.fontFamily = "'Press Start 2P', monospace";
+    levelUpText.style.fontSize = "36px";
+    levelUpText.style.fontWeight = "bold";
+    levelUpText.style.textShadow = "2px 2px 4px rgba(0, 0, 0, 0.7)";
+    levelUpText.style.zIndex = "11";
+    levelUpText.style.opacity = "0";
+    levelUpText.style.transition =
+      "all 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+    levelUpText.style.pointerEvents = "none";
+
+    document.querySelector(".game-container").appendChild(levelUpText);
+
+    // Animate the level up text
+    setTimeout(() => {
+      levelUpText.style.opacity = "1";
+      levelUpText.style.transform = "translate(-50%, -50%) scale(1)";
+
+      setTimeout(() => {
+        levelUpText.style.opacity = "0";
+        levelUpText.style.transform = "translate(-50%, -100%) scale(1.5)";
+        setTimeout(() => levelUpText.remove(), 700);
+      }, 1000);
+    }, 100);
+  }
+
+  // Play level up sound if available
+  if (gameAssets && gameAssets.sounds && gameAssets.sounds.powerup) {
+    gameAssets.sounds.powerup.currentTime = 0;
+    gameAssets.sounds.powerup
+      .play()
+      .catch((error) => console.warn("Audio play error:", error));
+  }
+
+  // Briefly slow down the game (temporal enhancement effect)
+  const originalSpeed = speed;
+  speed *= 0.5;
+
+  // Return to normal speed after a short pause
+  setTimeout(() => {
+    speed = originalSpeed;
+  }, 500);
+
+  // Update UI to reflect new difficulty level
+  const difficultyMessages = [
+    "Getting tougher!",
+    "Challenge accepted?",
+    "Speed up!",
+    "Watch out!",
+    "Difficulty rising!",
+  ];
+
+  // Show a random encouragement message
+  if (!browserInfo.isLowEnd) {
+    const randomMessage =
+      difficultyMessages[Math.floor(Math.random() * difficultyMessages.length)];
+    const messageElement = document.createElement("div");
+    messageElement.textContent = randomMessage;
+    messageElement.style.position = "absolute";
+    messageElement.style.bottom = "30%";
+    messageElement.style.left = "50%";
+    messageElement.style.transform = "translateX(-50%)";
+    messageElement.style.color = "#ffffff";
+    messageElement.style.fontFamily = "'Press Start 2P', monospace";
+    messageElement.style.fontSize = "16px";
+    messageElement.style.opacity = "0";
+    messageElement.style.transition = "opacity 0.5s ease-in-out";
+    messageElement.style.pointerEvents = "none";
+    messageElement.style.zIndex = "11";
+
+    document.querySelector(".game-container").appendChild(messageElement);
+
+    setTimeout(() => {
+      messageElement.style.opacity = "1";
+      setTimeout(() => {
+        messageElement.style.opacity = "0";
+        setTimeout(() => messageElement.remove(), 500);
+      }, 1500);
+    }, 800);
+  }
+}

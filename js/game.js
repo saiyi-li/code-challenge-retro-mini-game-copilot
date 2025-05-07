@@ -48,8 +48,8 @@ const MAX_PARTICLES = 30; // Limit to avoid performance issues
 let player = {
   x: 100,
   y: 0,
-  width: 48,
-  height: 48,
+  width: 64,  // Increased from 48
+  height: 64, // Increased from 48
   velocityY: 0,
   isJumping: false,
   frameX: 0, // Current animation frame
@@ -75,7 +75,7 @@ let backgrounds = {
 };
 
 const GROUND_HEIGHT = 40;
-const JUMP_FORCE = -800;
+const JUMP_FORCE = -850; // Increased to accommodate larger player
 const GRAVITY = 1800;
 let OBSTACLE_SPAWN_RATE = 0.5; // % chance per second
 let COIN_SPAWN_RATE = 1; // % chance per second
@@ -627,9 +627,9 @@ function spawnObstacle() {
   const obstacleType = Math.floor(Math.random() * 3);
   const obstacle = {
     x: canvas.width,
-    y: canvas.height - GROUND_HEIGHT - 48,
-    width: 48,
-    height: 48,
+    y: canvas.height - GROUND_HEIGHT - 64, // Adjusted for larger size
+    width: 64, // Increased from 48
+    height: 64, // Increased from 48
     type: obstacleType,
     speedMod: Math.random() * 2, // Random speed modifier
   };
@@ -640,9 +640,9 @@ function spawnObstacle() {
 function spawnCoin() {
   const coin = {
     x: canvas.width,
-    y: canvas.height - GROUND_HEIGHT - 24 - Math.random() * 80, // Random height
-    width: 24,
-    height: 24,
+    y: canvas.height - GROUND_HEIGHT - 32 - Math.random() * 80, // Adjusted for larger size
+    width: 32, // Increased from 24
+    height: 32, // Increased from 24
     frameX: 0,
     frameTimer: 0,
     animationSpeed: 0.1 + Math.random() * 0.1, // Random animation speed
@@ -656,9 +656,9 @@ function spawnPowerUp() {
   const powerUpType = Math.floor(Math.random() * 3);
   const powerUp = {
     x: canvas.width,
-    y: canvas.height - GROUND_HEIGHT - 24 - Math.random() * 100, // Random height
-    width: 24,
-    height: 24,
+    y: canvas.height - GROUND_HEIGHT - 32 - Math.random() * 100, // Adjusted for larger size
+    width: 32, // Increased from 24
+    height: 32, // Increased from 24
     type: powerUpType,
     frameX: 0,
     frameTimer: 0,
@@ -748,7 +748,7 @@ function render() {
   // Draw coins (only visible ones)
   visibleCoins.forEach((coin) => {
     if (gameAssets && gameAssets.coins) {
-      // Draw coin sprite from spritesheet
+      // Draw coin sprite from spritesheet, scaled up
       ctx.drawImage(
         gameAssets.coins,
         coin.frameX * 24,
@@ -764,7 +764,7 @@ function render() {
       // Fallback to a simple shape
       ctx.fillStyle = "#feae34";
       ctx.beginPath();
-      ctx.arc(coin.x + 12, coin.y + 12, 8, 0, Math.PI * 2);
+      ctx.arc(coin.x + coin.width/2, coin.y + coin.height/2, coin.width/3, 0, Math.PI * 2);
       ctx.fill();
     }
   });
@@ -772,7 +772,7 @@ function render() {
   // Draw power-ups (only visible ones)
   visiblePowerUps.forEach((powerUp) => {
     if (gameAssets && gameAssets.powerups) {
-      // Draw power-up sprite from spritesheet with pulsing effect
+      // Draw power-up sprite from spritesheet with pulsing effect and scaling
       const pulseScale = 1 + Math.sin(powerUp.pulse * 0.3) * 0.1;
       const scaledWidth = powerUp.width * pulseScale;
       const scaledHeight = powerUp.height * pulseScale;
@@ -795,14 +795,14 @@ function render() {
       const colors = ["#ff5e54", "#38b86e", "#fee761"];
       ctx.fillStyle = colors[powerUp.type];
       ctx.beginPath();
-      ctx.arc(powerUp.x + 12, powerUp.y + 12, 10, 0, Math.PI * 2);
+      ctx.arc(powerUp.x + powerUp.width/2, powerUp.y + powerUp.height/2, powerUp.width/3, 0, Math.PI * 2);
       ctx.fill();
     }
   });
 
   // Draw player with power-up effect if active
   if (gameAssets && gameAssets.character) {
-    // Draw player sprite from spritesheet
+    // Draw player sprite from spritesheet, scaled up
     ctx.drawImage(
       gameAssets.character,
       player.frameX * 48,
@@ -876,7 +876,7 @@ function render() {
   // Draw obstacles (only visible ones)
   visibleObstacles.forEach((obstacle) => {
     if (gameAssets && gameAssets.obstacles) {
-      // Draw obstacle sprite from spritesheet
+      // Draw obstacle sprite from spritesheet, scaled up
       ctx.drawImage(
         gameAssets.obstacles,
         obstacle.type * 48,

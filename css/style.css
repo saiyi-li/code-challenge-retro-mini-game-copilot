@@ -32,8 +32,8 @@ body {
   max-width: 800px;
   height: 600px;
   margin: 0 auto;
-  border: 4px solid #ff7700;
-  box-shadow: 0 0 15px rgba(255, 119, 0, 0.5);
+  border: 4px solid #6542a6; /* MYOB purple for border */
+  box-shadow: 0 0 15px rgba(101, 66, 166, 0.7); /* MYOB purple glow */
 }
 
 #game-canvas {
@@ -66,7 +66,7 @@ body {
 h1 {
   font-size: 2.5rem;
   margin-bottom: 20px;
-  color: #ff7700;
+  color: #6542a6; /* MYOB purple */
   text-shadow: 3px 3px 0 #000;
   letter-spacing: 2px;
   animation: pulse 1.5s infinite alternate;
@@ -77,7 +77,7 @@ h1 {
     text-shadow: 3px 3px 0 #000;
   }
   to {
-    text-shadow: 3px 3px 0 #000, 0 0 10px #ff7700;
+    text-shadow: 3px 3px 0 #000, 0 0 10px #6542a6; /* MYOB purple glow */
   }
 }
 
@@ -89,7 +89,7 @@ h1 {
 }
 
 button {
-  background-color: #ff7700;
+  background-color: #6542a6; /* MYOB purple */
   border: none;
   color: white;
   padding: 15px 32px;
@@ -106,7 +106,7 @@ button {
 }
 
 button:hover {
-  background-color: #ff9900;
+  background-color: #8663ba; /* Lighter MYOB purple */
   transform: translateY(-2px);
 }
 
@@ -132,13 +132,13 @@ button:active {
   text-shadow: 2px 2px 0 #000;
   background-color: rgba(0, 0, 0, 0.5);
   padding: 10px;
-  border: 2px solid #ff7700;
+  border: 2px solid #6542a6; /* MYOB purple */
 }
 
 .controls-info {
   background-color: rgba(0, 0, 0, 0.5);
   padding: 10px;
-  border: 2px solid #ff7700;
+  border: 2px solid #6542a6; /* MYOB purple */
   margin-top: 10px;
   font-size: 0.7rem;
   line-height: 1.4;
@@ -147,16 +147,18 @@ button:active {
 .game-logo {
   max-width: 80%;
   margin-bottom: 20px;
-  filter: drop-shadow(0 0 10px rgba(255, 119, 0, 0.7));
+  filter: drop-shadow(
+    0 0 10px rgba(101, 66, 166, 0.7)
+  ); /* MYOB purple shadow */
 }
 
 .high-score {
-  color: #ffcc00;
+  color: #a384cf; /* Light MYOB purple */
   margin-top: 10px;
 }
 
 .instructions {
-  border: 2px dashed #ff7700;
+  border: 2px dashed #6542a6; /* MYOB purple */
   padding: 15px;
   margin-top: 15px;
   max-width: 80%;
@@ -165,7 +167,7 @@ button:active {
 }
 
 .instructions h2 {
-  color: #ff9900;
+  color: #8663ba; /* Medium MYOB purple */
   margin-bottom: 10px;
   font-size: 1rem;
 }

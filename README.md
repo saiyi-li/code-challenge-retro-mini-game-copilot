@@ -6,6 +6,8 @@
 - Implement pixel art for characters, coins, and backgrounds.
 - Keep on-screen text minimal and use pixelated or blocky fonts.
 - Generate simple sprite art and background images using AI.
+- Incorporate MYOB brand colors (particularly MYOB purple) subtly into game elements.
+- Design coins with MYOB purple coloration and integrate brand elements into platforms.
 
 ## Gameplay & Mechanics
 

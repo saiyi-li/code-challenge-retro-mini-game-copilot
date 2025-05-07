@@ -9,12 +9,16 @@ const generateCtx = generateCanvas.getContext("2d");
 
 // Asset generation utilities
 const AssetGenerator = {
-  // Color palettes for a retro look
+  // Color palettes for a retro look with MYOB brand colors incorporated
   palettes: {
     character: ["#181425", "#5a6988", "#3a4466", "#262b44", "#ff0044"],
     environment: ["#181425", "#262b44", "#3a4466", "#5a6988", "#8b9bb4"],
-    coins: ["#181425", "#c0c741", "#feae34", "#fee761", "#ffffff"],
-    powerups: ["#181425", "#7a3045", "#cc2a41", "#ff5e54", "#38b86e"],
+    // MYOB Purple (#6542a6) color integrated into coins
+    coins: ["#181425", "#6542a6", "#8663ba", "#a384cf", "#ffffff"],
+    // MYOB Purple in power-ups
+    powerups: ["#181425", "#7a3045", "#6542a6", "#ff5e54", "#38b86e"],
+    // MYOB brand colors palette
+    myob: ["#6542a6", "#9469e3", "#00b0a6", "#e12229", "#0070c0"],
   },
 
   // Quality settings for different device capabilities
@@ -199,6 +203,7 @@ const AssetGenerator = {
    */
   _drawObstacle2(ctx, x, y) {
     const palette = this.palettes.environment;
+    const myobPalette = this.palettes.myob;
 
     // Base shape
     ctx.fillStyle = palette[2];
@@ -209,6 +214,11 @@ const AssetGenerator = {
     ctx.fillStyle = palette[3];
     ctx.fillRect(x + 16, y + 36, 4, 4);
     ctx.fillRect(x + 26, y + 32, 6, 6);
+
+    // MYOB brand element - subtle purple accent
+    ctx.fillStyle = myobPalette[0]; // MYOB purple
+    ctx.fillRect(x + 20, y + 40, 8, 2);
+    ctx.fillRect(x + 22, y + 38, 4, 2);
   },
 
   /**
@@ -216,6 +226,7 @@ const AssetGenerator = {
    */
   _drawObstacle3(ctx, x, y) {
     const palette = this.palettes.environment;
+    const myobPalette = this.palettes.myob;
 
     // Base
     ctx.fillStyle = palette[1];
@@ -232,6 +243,10 @@ const AssetGenerator = {
     ctx.fillStyle = palette[3];
     ctx.fillRect(x + 20, y + 24, 2, 8);
     ctx.fillRect(x + 26, y + 28, 2, 4);
+
+    // MYOB brand element - teal accent on the spike
+    ctx.fillStyle = myobPalette[2]; // MYOB teal
+    ctx.fillRect(x + 19, y + 18, 2, 4);
   },
 
   /**
@@ -268,11 +283,11 @@ const AssetGenerator = {
     const width = Math.max(2, Math.floor(12 * widthRatio));
 
     // Coin shape
-    ctx.fillStyle = palette[2]; // Base gold
+    ctx.fillStyle = palette[1]; // MYOB purple base
     ctx.fillRect(centerX - width / 2, y + 6, width, 12);
 
-    // Highlight
-    ctx.fillStyle = palette[3]; // Light gold
+    // Highlight - lighter purple
+    ctx.fillStyle = palette[3];
     ctx.fillRect(centerX - width / 2, y + 8, width, 4);
 
     // Outline
@@ -281,6 +296,15 @@ const AssetGenerator = {
     ctx.fillRect(centerX + width / 2 - 1, y + 6, 1, 12);
     ctx.fillRect(centerX - width / 2, y + 6, width, 1);
     ctx.fillRect(centerX - width / 2, y + 17, width, 1);
+
+    // MYOB "M" logo hint (simplified for pixel art)
+    if (widthRatio > 0.7) {
+      // Only on front-facing frames
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(centerX - 2, y + 10, 1, 4); // Left line of M
+      ctx.fillRect(centerX, y + 10, 1, 4); // Right line of M
+      ctx.fillRect(centerX - 1, y + 10, 1, 1); // Top middle connector
+    }
   },
 
   /**
@@ -380,14 +404,28 @@ const AssetGenerator = {
     canvas.height = 160;
 
     const palette = this.palettes.environment;
+    const myobPalette = this.palettes.myob;
 
     // Small bushes or rocks
-    ctx.fillStyle = palette[1];
     for (let i = 0; i < canvas.width; i += 40) {
       if (Math.random() > 0.3) {
         const width = 8 + Math.random() * 12;
         const height = 4 + Math.random() * 6;
+
+        // Randomly use MYOB purple for some platform elements
+        if (Math.random() > 0.6) {
+          ctx.fillStyle = myobPalette[0]; // MYOB purple
+        } else {
+          ctx.fillStyle = palette[1];
+        }
+
         ctx.fillRect(i, 160 - height, width, height);
+
+        // Add MYOB teal accents to some elements
+        if (Math.random() > 0.7) {
+          ctx.fillStyle = myobPalette[2]; // MYOB teal
+          ctx.fillRect(i + width / 4, 160 - height - 2, 2, 2);
+        }
       }
     }
 
@@ -444,14 +482,15 @@ const AssetGenerator = {
    */
   _drawInvincibility(ctx, x, y) {
     const palette = this.palettes.powerups;
+    const myobPalette = this.palettes.myob;
 
-    // Shield shape
-    ctx.fillStyle = palette[3];
+    // Shield shape using MYOB purple
+    ctx.fillStyle = myobPalette[0]; // MYOB purple
     ctx.fillRect(x + 8, y + 6, 8, 12);
     ctx.fillRect(x + 6, y + 8, 12, 8);
 
     // Star center
-    ctx.fillStyle = palette[4];
+    ctx.fillStyle = myobPalette[2]; // MYOB teal
     ctx.fillRect(x + 10, y + 10, 4, 4);
 
     // Outline
@@ -467,13 +506,14 @@ const AssetGenerator = {
    */
   _drawDoublePoints(ctx, x, y) {
     const palette = this.palettes.powerups;
+    const myobPalette = this.palettes.myob;
 
     // Base
-    ctx.fillStyle = palette[1];
+    ctx.fillStyle = myobPalette[0]; // MYOB purple for base
     ctx.fillRect(x + 8, y + 8, 8, 8);
 
     // "x2" text
-    ctx.fillStyle = palette[3];
+    ctx.fillStyle = "#ffffff"; // White text for contrast
     // "x"
     ctx.fillRect(x + 9, y + 9, 2, 2);
     ctx.fillRect(x + 11, y + 11, 2, 2);

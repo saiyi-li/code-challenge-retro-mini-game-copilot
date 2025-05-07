@@ -48,7 +48,7 @@ const MAX_PARTICLES = 30; // Limit to avoid performance issues
 let player = {
   x: 100,
   y: 0,
-  width: 64,  // Increased from 48
+  width: 64, // Increased from 48
   height: 64, // Increased from 48
   velocityY: 0,
   isJumping: false,
@@ -764,7 +764,13 @@ function render() {
       // Fallback to a simple shape
       ctx.fillStyle = "#feae34";
       ctx.beginPath();
-      ctx.arc(coin.x + coin.width/2, coin.y + coin.height/2, coin.width/3, 0, Math.PI * 2);
+      ctx.arc(
+        coin.x + coin.width / 2,
+        coin.y + coin.height / 2,
+        coin.width / 3,
+        0,
+        Math.PI * 2
+      );
       ctx.fill();
     }
   });
@@ -795,7 +801,13 @@ function render() {
       const colors = ["#ff5e54", "#38b86e", "#fee761"];
       ctx.fillStyle = colors[powerUp.type];
       ctx.beginPath();
-      ctx.arc(powerUp.x + powerUp.width/2, powerUp.y + powerUp.height/2, powerUp.width/3, 0, Math.PI * 2);
+      ctx.arc(
+        powerUp.x + powerUp.width / 2,
+        powerUp.y + powerUp.height / 2,
+        powerUp.width / 3,
+        0,
+        Math.PI * 2
+      );
       ctx.fill();
     }
   });

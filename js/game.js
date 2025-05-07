@@ -73,12 +73,18 @@ function loadGameAssets() {
   // Generate assets if they don't exist
   if (!gameAssets) {
     console.log("Generating game assets...");
-    gameAssets = AssetGenerator.generateAllAssets();
+    try {
+      gameAssets = AssetGenerator.generateAllAssets();
+      console.log("Assets generated successfully:", gameAssets);
+    } catch (error) {
+      console.error("Error generating assets:", error);
+    }
   }
 }
 
 // Initialize the game
 function init() {
+  console.log("Game initialization started");
   resizeCanvas();
   loadGameAssets();
 
@@ -107,6 +113,7 @@ function init() {
   // Start the game loop
   lastTime = performance.now();
   gameLoop();
+  console.log("Game loop started");
 }
 
 // Game loop
@@ -424,29 +431,73 @@ function gameOver() {
   gameOverScreen.classList.remove("hidden");
 }
 
-// Event listeners
-startButton.addEventListener("click", init);
-restartButton.addEventListener("click", init);
-
-// Handle window resize
-window.addEventListener("resize", resizeCanvas);
-
-// Initialize canvas size on load
-window.addEventListener("load", resizeCanvas);
-
-// Add keyboard controls
-window.addEventListener("keydown", (e) => {
-  if (gameActive && (e.key === "ArrowUp" || e.key === " " || e.key === "w")) {
-    playerJump();
+// Setup all event listeners
+function setupEventListeners() {
+  console.log("Setting up event listeners");
+  
+  // Button controls
+  if (startButton) {
+    console.log("Start button found, attaching event listener");
+    startButton.addEventListener("click", function() {
+      console.log("Start button clicked");
+      init();
+    });
+  } else {
+    console.error("Start button not found!");
   }
-});
-
-// Touch controls for mobile
-canvas.addEventListener("touchstart", () => {
-  if (gameActive) {
-    playerJump();
+  
+  if (restartButton) {
+    console.log("Restart button found, attaching event listener");
+    restartButton.addEventListener("click", function() {
+      console.log("Restart button clicked");
+      init();
+    });
   }
-});
 
-// Display start screen initially
-canvas.style.opacity = 0.3;
+  // Keyboard controls
+  window.addEventListener("keydown", (e) => {
+    // Start or restart the game with space bar
+    if (e.key === " " || e.code === "Space") {
+      console.log("Space bar pressed");
+      if (!gameActive && startScreen.classList.contains("hidden") === false) {
+        console.log("Starting game with space bar");
+        init();
+      } else if (!gameActive && gameOverScreen.classList.contains("hidden") === false) {
+        console.log("Restarting game with space bar");
+        init();
+      } else if (gameActive) {
+        playerJump();
+      }
+    } else if (gameActive && (e.key === "ArrowUp" || e.key === "w" || e.code === "ArrowUp" || e.code === "KeyW")) {
+      playerJump();
+    }
+  });
+
+  // Touch controls for mobile
+  canvas.addEventListener("touchstart", () => {
+    if (gameActive) {
+      playerJump();
+    }
+  });
+  
+  // Handle clicking anywhere on the start screen to start the game
+  startScreen.addEventListener("click", function() {
+    console.log("Start screen clicked");
+    if (!gameActive) {
+      init();
+    }
+  });
+
+  // Handle window resize
+  window.addEventListener("resize", resizeCanvas);
+}
+
+// Initialize canvas size and event listeners on load
+window.addEventListener("load", function() {
+  console.log("Window loaded");
+  resizeCanvas();
+  setupEventListeners();
+  
+  // Display start screen initially
+  canvas.style.opacity = 0.3;
+});

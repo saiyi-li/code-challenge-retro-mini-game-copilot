@@ -1,0 +1,89 @@
+# Copilot Rules for Retro Mini Game Project
+
+# Define project-specific style guidelines
+style:
+  # Specify coding style preferences
+  indentation: 2 spaces
+  line_length: 80
+  quotes: single
+  semicolons: always
+
+# Define project-specific content restrictions
+restrictions:
+  # Avoid generating certain types of content
+  forbidden_patterns:
+    - localStorage # Prefer different storage mechanism
+    - eval # Security best practice
+    - innerText # Prefer textContent
+
+# Define project-specific preferences
+preferences:
+  # Encourage certain types of code or approaches
+  framework: vanilla JS # No external framework dependencies
+  animation: CSS # Prefer CSS for animations
+  comments: detailed # Request detailed documentation
+  testing: recommend # Suggest tests for new functions
+
+# Clean Code Guidelines
+clean_code:
+  description: Guidelines for writing clean, maintainable, and human-readable code.
+  rules:
+    - name: Constants Over Magic Numbers
+      description: 
+        - Replace hard-coded values with named constants
+        - Use descriptive constant names that explain the value's purpose
+        - Keep constants at the top of the file or in a dedicated constants file
+
+    - name: Meaningful Names
+      description:
+        - Variables, functions, and classes should reveal their purpose
+        - Names should explain why something exists and how it's used
+        - Avoid abbreviations unless they're universally understood
+
+    - name: Smart Comments
+      description:
+        - Don't comment on what the code does - make the code self-documenting
+        - Use comments to explain why something is done a certain way
+        - Document APIs, complex algorithms, and non-obvious side effects
+
+    - name: Single Responsibility
+      description:
+        - Each function should do exactly one thing
+        - Functions should be small and focused
+        - If a function needs a comment to explain what it does, it should be split
+
+    - name: DRY (Don't Repeat Yourself)
+      description:
+        - Extract repeated code into reusable functions
+        - Share common logic through proper abstraction
+        - Maintain single sources of truth
+
+    - name: Clean Structure
+      description:
+        - Keep related code together
+        - Organize code in a logical hierarchy
+        - Use consistent file and folder naming conventions
+
+    - name: Encapsulation
+      description:
+        - Hide implementation details
+        - Expose clear interfaces
+        - Move nested conditionals into well-named functions
+
+    - name: Code Quality Maintenance
+      description:
+        - Refactor continuously
+        - Fix technical debt early
+        - Leave code cleaner than you found it
+
+    - name: Testing
+      description:
+        - Write tests before fixing bugs
+        - Keep tests readable and maintainable
+        - Test edge cases and error conditions
+
+    - name: Version Control
+      description:
+        - Write clear commit messages
+        - Make small, focused commits
+        - Use meaningful branch names
